@@ -1,4 +1,6 @@
 {
 	"freeplayColor": [146, 113, 253],
-	"songs": [["stress", "tankman", [255, 255, 255]]]
+	"songs": [["stress", "tankman", [67, 76, 40]],
+			["vessel", "tankman", [67, 76, 40]],
+			["personel", "tankman", [67, 76, 40]]]
 }

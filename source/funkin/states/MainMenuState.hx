@@ -96,9 +96,9 @@ class MainMenuState extends MusicBeatState
 			FlxTween.tween(menuItem, {x: targetX}, 0.15 + (menuItem.ID * 0.25), {ease: FlxEase.expoInOut});
 		});
 
-		var versionShit:FlxText = new FlxText(5, FlxG.height - 18, 0, "K Engine v" + Main.gameVersion, 12);
+		var versionShit:FlxText = new FlxText(5, FlxG.height - 18, 0, "K-Slice v" + Main.gameVersion, 12);
+		versionShit.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		versionShit.scrollFactor.set();
-		versionShit.setFormat("VCR OSD Mono", 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(versionShit);
 	}
 

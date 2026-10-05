@@ -314,8 +314,6 @@ class FreeplayState extends MusicBeatState
 		if (curSelected >= songs.length)
 			curSelected = 0;
 
-		// selector.y = (70 * curSelected) + 30;
-
 		// set up color stuffs
 		mainColor = songs[curSelected].songColor;
 
@@ -336,18 +334,12 @@ class FreeplayState extends MusicBeatState
 			bullShit++;
 
 			item.alpha = 0.6;
-			// item.setGraphicSize(Std.int(item.width * 0.8));
 
 			if (item.targetY == 0)
 			{
 				item.alpha = 1;
-				// item.setGraphicSize(Std.int(item.width));
 			}
 		}
-		//
-
-		//trace("curSelected: " + curSelected);
-
 		changeDiff();
 		changeSongPlaying();
 	}
@@ -362,7 +354,6 @@ class FreeplayState extends MusicBeatState
 				{
 					if (!threadActive)
 					{
-						//trace("Killing thread");
 						return;
 					}
 
@@ -371,8 +362,6 @@ class FreeplayState extends MusicBeatState
 					{
 						if (index == curSelected && index != curSongPlaying)
 						{
-							//trace("Loading index " + index);
-
 							var inst:Sound = Paths.inst(songs[curSelected].songName);
 
 							if (index == curSelected && threadActive)
@@ -383,19 +372,14 @@ class FreeplayState extends MusicBeatState
 
 								curSongPlaying = curSelected;
 							}
-							else
-								trace("Nevermind, skipping " + index);
+							else trace("Nevermind, skipping " + index);
 						}
-						//else
-							//trace("Skipping " + index);
 					}
 				}
 			});
 		}
-
 		songThread.sendMessage(curSelected);
 	}
-
 	var playingSongs:Array<FlxSound> = [];
 }
 
