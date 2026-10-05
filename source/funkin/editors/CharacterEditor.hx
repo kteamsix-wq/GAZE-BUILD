@@ -9,7 +9,7 @@ import flixel.addons.display.FlxGridOverlay;
 import flixel.addons.ui.FlxUI;
 import flixel.addons.ui.FlxUITabMenu;
 import flixel.addons.ui.FlxUIDropDownMenu;
-import flixel.addons.ui.FlxUIInputText;
+import flixel.text.FlxInputText;
 import flixel.addons.ui.FlxUINumericStepper;
 import flixel.addons.ui.FlxUICheckBox;
 import flixel.group.FlxGroup.FlxTypedGroup;
@@ -17,6 +17,7 @@ import openfl.events.Event;
 import openfl.events.IOErrorEvent;
 import openfl.net.FileReference;
 import backend.MusicBeatState;
+import backend.CoolUtil;
 import funkin.objects.Character;
 import haxe.Json;
 import sys.io.File;
@@ -34,7 +35,7 @@ class CharacterEditor extends MusicBeatState
 	
 	var charDropDown:FlxUIDropDownMenu;
 	var animDropDown:FlxUIDropDownMenu;
-	var inputIcon:FlxUIInputText;
+	var inputIcon:FlxInputText;
 	var stepColorR:FlxUINumericStepper;
 	var stepColorG:FlxUINumericStepper;
 	var stepColorB:FlxUINumericStepper;
@@ -103,7 +104,7 @@ class CharacterEditor extends MusicBeatState
 		});
 		charDropDown.selectedLabel = curCharName;
 		
-		inputIcon = new FlxUIInputText(10, 50, 100, "face", 8);
+		inputIcon = new FlxInputText(10, 50, 100, "face", 8);
 		
 		stepColorR = new FlxUINumericStepper(10, 80, 1, 161, 0, 255);
 		stepColorG = new FlxUINumericStepper(60, 80, 1, 161, 0, 255);
@@ -161,14 +162,7 @@ class CharacterEditor extends MusicBeatState
 	
 	function getCharactersList():Array<String>
 	{
-		var list = [];
-		var dir = sys.FileSystem.readDirectory('assets/data/char');
-		for (file in dir) {
-			if (file.endsWith(".json")) {
-				list.push(file.replace(".json", ""));
-			}
-		}
-		return list;
+		return CoolUtil.getCharacterList();
 	}
 	
 	function getAnimList():Array<String>

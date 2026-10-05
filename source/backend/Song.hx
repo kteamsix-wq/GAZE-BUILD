@@ -1,4 +1,4 @@
-﻿package backend;
+package backend;
 import backend.*;
 import funkin.objects.*;
 import funkin.objects.FunkinArrows;
@@ -55,13 +55,29 @@ class Song
 	public static function loadFromJson(jsonInput:String, ?folder:String):SwagSong
 	{
 		var songFolder:String = (folder == null) ? jsonInput : folder;
+		
 		var chartPath:String = 'assets/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json';
-		if (FileSystem.exists('mods/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json'))
+
+		#if sys
+		var modChartPath:String = 'mods/' + Mods.currentModDirectory + '/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json';
+		if (Mods.currentModDirectory != null && FileSystem.exists(modChartPath))
+			chartPath = modChartPath;
+		else if (FileSystem.exists('mods/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json'))
 			chartPath = 'mods/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json';
+		#end
+
 		if (!FileSystem.exists(chartPath))
 			chartPath = 'assets/songs/${songFolder.toLowerCase()}/chart/chart.json';
-		if (!FileSystem.exists(chartPath))
-			chartPath = 'mods/songs/${songFolder.toLowerCase()}/chart/chart.json';
+
+		#if sys
+		var modChartPath2:String = 'mods/' + Mods.currentModDirectory + '/songs/${songFolder.toLowerCase()}/chart/chart.json';
+		if (!FileSystem.exists(chartPath)) {
+			if (Mods.currentModDirectory != null && FileSystem.exists(modChartPath2))
+				chartPath = modChartPath2;
+			else if (FileSystem.exists('mods/songs/${songFolder.toLowerCase()}/chart/chart.json'))
+				chartPath = 'mods/songs/${songFolder.toLowerCase()}/chart/chart.json';
+		}
+		#end
 
 		var rawJson = File.getContent(chartPath).trim();
 

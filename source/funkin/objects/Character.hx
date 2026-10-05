@@ -88,7 +88,7 @@ class Character extends FunkinSprites
 
 		var jsonPath = Paths.getPath('data/char/' + curCharacter + '.json', TEXT);
 		
-		trace('Checking jsonPath: ' + jsonPath);
+		//trace('Checking jsonPath: ' + jsonPath);
 		if (sys.FileSystem.exists(jsonPath))
 		{
 			var rawJson = sys.io.File.getContent(jsonPath);
@@ -98,10 +98,9 @@ class Character extends FunkinSprites
 			var animJson = Paths.getPath('images/' + json.image + '/Animation.json', TEXT);
 				flixel.FlxG.log.warn('ANIMJSON PATH IS: ' + animJson);
 			
-			trace('Anim json path: ' + animJson + ' exists: ' + sys.FileSystem.exists(animJson)); if (sys.FileSystem.exists(animJson)) {
+			//trace('Anim json path: ' + animJson + ' exists: ' + sys.FileSystem.exists(animJson)); 
+			if (sys.FileSystem.exists(animJson)) {
 				this.frames = animate.FlxAnimateFrames.fromAnimate(Paths.getPath('images/' + json.image, TEXT));
-				
-				
 				
 				try {
 					this.anim.addBySymbol('idle', 'BF idle dance', 24, false);

@@ -96,7 +96,7 @@ class Paths
 						openfl.Assets.cache.removeBitmapData(key);
 						FlxG.bitmap._cache.remove(key);
 					}
-					trace('removed $key, ' + (isTexture ? 'is a texture' : 'is not a texture'));
+					//trace('removed $key, ' + (isTexture ? 'is a texture' : 'is not a texture'));
 					obj.destroy();
 					currentTrackedAssets.remove(key);
 					counter++;
@@ -160,7 +160,7 @@ class Paths
 					bitmap.dispose();
 					bitmap.disposeImage();
 					bitmap = null;
-					trace('new texture $key, bitmap is $bitmap');
+					//trace('new texture $key, bitmap is $bitmap');
 					newGraphic = FlxGraphic.fromBitmapData(BitmapData.fromTexture(texture), false, key, false);
 				}
 				else
@@ -173,7 +173,7 @@ class Paths
 			localTrackedAssets.push(key);
 			return currentTrackedAssets.get(key);
 		}
-		trace('oh no ' + key + ' is returning null NOOOO');
+		//trace('oh no ' + key + ' is returning null NOOOO');
 		return null;
 	}
 
@@ -189,10 +189,23 @@ class Paths
 		return currentTrackedSounds.get(gottenPath);
 	}
 
-	inline public static function getPath(file:String, type:AssetType, ?library:Null<String>)
+	public static function getPath(file:String, type:AssetType, ?library:Null<String>)
 	{
 		if (library != null)
 			return getLibraryPath(file, library);
+
+		#if sys
+		if (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
+		{
+			var modPath:String = 'mods/' + Mods.currentModDirectory + '/' + file;
+			if (FileSystem.exists(modPath))
+				return modPath;
+		}
+
+		var globalModPath:String = 'mods/' + file;
+		if (FileSystem.exists(globalModPath))
+			return globalModPath;
+		#end
 
 		var levelPath = getLibraryPathForce(file, "mods");
 		if (OpenFlAssets.exists(levelPath, type))
@@ -315,5 +328,9 @@ class Paths
 
 	inline static public function getPackerAtlas(key:String, ?library:String, ?textureCompression:Bool = true) { 
 		return (FlxAtlasFrames.fromSpriteSheetPacker(image(key, library, textureCompression), file('images/$key.txt', library)));
+	}
+
+	inline static public function shader(key:String, ?vertexKey:String):FunkinShader {
+		return FunkinShader.fromFile(key, vertexKey);
 	}
 }

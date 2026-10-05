@@ -116,12 +116,24 @@ class CoolUtil
 	public static function getCharacterList():Array<String>
 	{
 		var charArray:Array<String> = [];
+		var charMap:Map<String, Bool> = new Map();
+
 		#if sys
-		var path = 'assets/data/char/';
-		if (sys.FileSystem.exists(path)) {
-			for (file in sys.FileSystem.readDirectory(path)) {
-				if (file.endsWith('.json')) {
-					charArray.push(file.substring(0, file.length - 5));
+		var directories:Array<String> = ['assets/data/char'];
+		if (backend.Mods.currentModDirectory != null) {
+			directories.push('mods/' + backend.Mods.currentModDirectory + '/data/char');
+		}
+
+		for (path in directories) {
+			if (sys.FileSystem.exists(path)) {
+				for (file in sys.FileSystem.readDirectory(path)) {
+					if (file.endsWith('.json')) {
+						var name = file.substring(0, file.length - 5);
+						if (!charMap.exists(name)) {
+							charMap.set(name, true);
+							charArray.push(name);
+						}
+					}
 				}
 			}
 		}

@@ -118,7 +118,7 @@ class Alphabet extends FlxSpriteGroup
 
 	function destroyText():Void
 	{
-		for (_sprite in _sprites.copy())
+		for (_sprite in group.members.copy())
 			_sprite.destroy();
 		clear();
 	}

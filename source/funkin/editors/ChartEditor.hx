@@ -12,7 +12,7 @@ import Init;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.addons.display.FlxGridOverlay;
-import flixel.addons.ui.FlxInputText;
+import flixel.text.FlxInputText;
 import flixel.addons.ui.FlxUI9SliceSprite;
 import flixel.addons.ui.FlxUI;
 import flixel.addons.ui.FlxUICheckBox;
@@ -176,7 +176,7 @@ class ChartEditor extends MusicBeatState
 
 	function addSongUI():Void
 	{
-		var UI_songTitle = new FlxUIInputText(10, 10, 70, _song.song, 8);
+		var UI_songTitle = new FlxInputText(10, 10, 70, _song.song, 8);
 		typingShit = UI_songTitle;
 
 		var check_voices = new FlxUICheckBox(10, 25, null, null, "Has voice track", 100);
@@ -396,11 +396,17 @@ class ChartEditor extends MusicBeatState
 		if (vocals != null)
 			vocals.stop();
 
-		songMusic = new FlxSound().loadEmbedded(Paths.inst(daSong), false, true);
+		songMusic = new FlxSound().load(Paths.inst(daSong));
+		songMusic.autoDestroy = true;
 		if (_song.needsVoices)
-			vocals = new FlxSound().loadEmbedded(Paths.voices(daSong), false, true);
+		{
+			vocals = new FlxSound().load(Paths.voices(daSong));
+			vocals.autoDestroy = true;
+		}
 		else
+		{
 			vocals = new FlxSound();
+		}
 		FlxG.sound.list.add(songMusic);
 		FlxG.sound.list.add(vocals);
 

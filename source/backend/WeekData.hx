@@ -41,20 +41,38 @@ class WeekData
 	public static function loadWeeks():Array<WeekData>
 	{
 		var weeks:Array<WeekData> = [];
+		var weekFiles:Map<String, String> = new Map();
 
 		#if sys
-		var directory:String = 'assets/data/weeks';
-		if (!FileSystem.exists(directory))
-			return weeks;
+		var directories:Array<String> = ['assets/data/weeks'];
+		if (backend.Mods.currentModDirectory != null) {
+			directories.push('mods/' + backend.Mods.currentModDirectory + '/data/weeks');
+		}
 
-		var files:Array<String> = FileSystem.readDirectory(directory);
-		files = files.filter(function(file:String):Bool return file.toLowerCase().endsWith('.json'));
-		files.sort(function(a:String, b:String):Int return Reflect.compare(a, b));
+		for (directory in directories) {
+			if (!FileSystem.exists(directory)) continue;
 
-		for (fileName in files)
+			var files:Array<String> = FileSystem.readDirectory(directory);
+			files = files.filter(function(file:String):Bool return file.toLowerCase().endsWith('.json'));
+
+			for (fileName in files) {
+				if (!weekFiles.exists(fileName)) {
+					weekFiles.set(fileName, directory);
+				}
+			}
+		}
+
+		var sortedFiles:Array<String> = [];
+		for (key in weekFiles.keys()) {
+			sortedFiles.push(key);
+		}
+		sortedFiles.sort(function(a:String, b:String):Int return Reflect.compare(a, b));
+
+		for (fileName in sortedFiles)
 		{
 			try
 			{
+				var directory = weekFiles.get(fileName);
 				var fileId:String = fileName.substr(0, fileName.length - 5);
 				var json:Dynamic = Json.parse(File.getContent('$directory/$fileName'));
 				var week:WeekData = fromJson(fileId, weeks.length + 1, json);

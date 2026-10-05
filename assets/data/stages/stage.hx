@@ -2,7 +2,7 @@ var wall;
 var floor;
 var curtains;
 
-var path = 'backgrounds/stage/'
+var path = 'backgrounds/stage/';
 
 function create() {
     wall = new FlxSprite(0, 0);

@@ -67,6 +67,29 @@ class PlayState extends MusicBeatState
 	public static var gf:Character;
 	public static var boyfriend:Boyfriend;
 
+	public var hscriptArray:Array<HScriptHandler> = [];
+
+	public function callOnScripts(funcName:String, ?args:Array<Dynamic>) {
+		for (script in hscriptArray) {
+			if (script.active) script.call(funcName, args);
+		}
+	}
+
+	public function initScripts() {
+		#if sys
+		var songName = SONG.song.toLowerCase();
+		var songScriptPath = Paths.getPath('songs/$songName/script.hx', TEXT);
+		if (sys.FileSystem.exists(songScriptPath)) {
+			hscriptArray.push(new HScriptHandler(songScriptPath));
+		}
+		
+		var stageScriptPath = Paths.getPath('data/stages/' + curStage + '.hx', TEXT);
+		if (sys.FileSystem.exists(stageScriptPath)) {
+			hscriptArray.push(new HScriptHandler(stageScriptPath));
+		}
+		#end
+	}
+
 	public static var assetModifier:String = 'base';
 	public static var changeableSkin:String = 'default';
 
@@ -227,6 +250,9 @@ class PlayState extends MusicBeatState
 		if (SONG.stage != null)
 			curStage = SONG.stage;
 
+		initScripts();
+		callOnScripts('onCreate');
+
 		// cache shit
 		displayRating('sick', 'early', true);
 		popUpCombo(true);
@@ -238,7 +264,6 @@ class PlayState extends MusicBeatState
 		Paths.image('UI/combo/default/bad');
 		Paths.image('UI/combo/default/shit');
 		Paths.image('UI/notes/default/splash');
-		//
 
 		stageBuild = new Stage(curStage);
 		add(stageBuild.background);
@@ -373,6 +398,7 @@ class PlayState extends MusicBeatState
 		updateCamFollow();
 		
 		startCountdown();
+		callOnScripts('onCreatePost');
 	}
 
 	public static function copyKey(arrayToCopy:Array<FlxKey>):Array<FlxKey>
@@ -543,6 +569,7 @@ class PlayState extends MusicBeatState
 		stageBuild.stageUpdateConstant(elapsed, boyfriend, gf, dadOpponent);
 
 		super.update(elapsed);
+		callOnScripts('onUpdate', [elapsed]);
 		timerManager.update(elapsed);
 
 		if (health > 2)
@@ -726,8 +753,6 @@ class PlayState extends MusicBeatState
 				if (strumline.autoplay)
 					strumCallsAuto(uiNote);
 			}
-
-
 		}
 
 		// if the song is generated
@@ -879,7 +904,6 @@ class PlayState extends MusicBeatState
 											for (note in parentNote.childrenNotes)
 												note.tooLate = true;
 										}
-										//
 									}
 								}
 							}
@@ -1455,13 +1479,19 @@ class PlayState extends MusicBeatState
 		updateRPC(false);
 
 		curSong = songData.song;
-		songMusic = new FlxSound().loadEmbedded(Paths.inst(SONG.song), false, true);
+		songMusic = new FlxSound().load(Paths.inst(SONG.song));
+		songMusic.autoDestroy = true;
 		songMusic.onComplete = endSong;
 
 		if (SONG.needsVoices)
-			vocals = new FlxSound().loadEmbedded(Paths.voices(SONG.song), false, true);
+		{
+			vocals = new FlxSound().load(Paths.voices(SONG.song));
+			vocals.autoDestroy = true;
+		}
 		else
+		{
 			vocals = new FlxSound();
+		}
 
 		FlxG.sound.list.add(songMusic);
 		FlxG.sound.list.add(vocals);
@@ -1508,6 +1538,8 @@ class PlayState extends MusicBeatState
 
 		if (stageBuild != null)
 			stageBuild.stageStep(curStep);
+			
+		callOnScripts('onStepHit', [curStep]);
 
 		if (songMusic.time >= Conductor.songPosition + 20 || songMusic.time <= Conductor.songPosition - 20)
 			resyncVocals();
@@ -1534,6 +1566,8 @@ class PlayState extends MusicBeatState
 
 		if (uiHUD != null)
 			uiHUD.beatHit(curBeat);
+			
+		callOnScripts('onBeatHit', [curBeat]);
 			
 		updateRPC(false);
 
@@ -1656,7 +1690,7 @@ class PlayState extends MusicBeatState
 		Utils.killMusic([songMusic, vocals]);
 
 		// deliberately did not use the main.switchstate as to not unload the assets
-		FlxG.switchState(new PlayState());
+		FlxG.switchState(() -> new PlayState());
 	}
 
 	public static var swagCounter:Int = 0;

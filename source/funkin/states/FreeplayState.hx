@@ -28,7 +28,6 @@ using StringTools;
 
 class FreeplayState extends MusicBeatState
 {
-	//
 	var songs:Array<SongMetadata> = [];
 
 	var selector:FlxText;
@@ -85,15 +84,12 @@ class FreeplayState extends MusicBeatState
 			}
 		}
 
-		// LOAD MUSIC
-		// Utils.resetMenuMusic();
-
 		#if !html5
 		Discord.changePresence('FREEPLAY MENU', 'Main Menu');
 		#end
 
 		// LOAD CHARACTERS
-		bg = new FlxSprite().loadGraphic(Paths.image('menus/base/menuDesat'));
+		bg = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
 		add(bg);
 
 		grpSongs = new FlxTypedGroup<Alphabet>();
@@ -112,10 +108,6 @@ class FreeplayState extends MusicBeatState
 			// using a FlxGroup is too much fuss!
 			iconArray.push(icon);
 			add(icon);
-
-			// songText.x += 40;
-			// DONT PUT X IN THE FIRST PARAMETER OF new ALPHABET() !!
-			// songText.screenCenter(X);
 		}
 
 		scoreText = new FlxText(FlxG.width * 0.7, 5, 0, "", 32);
@@ -141,13 +133,10 @@ class FreeplayState extends MusicBeatState
 			diffText.text = 'ADD A JSON TO assets/data/weeks';
 		}
 
-		// FlxG.sound.playMusic(Paths.music('title'), 0);
-		// FlxG.sound.music.fadeIn(2, 0, 0.8);
 		selector = new FlxText();
 
 		selector.size = 40;
 		selector.text = ">";
-		// add(selector);
 	}
 
 	public function addSong(songName:String, weekNum:Int, songCharacter:String, songColor:FlxColor)
@@ -176,6 +165,15 @@ class FreeplayState extends MusicBeatState
 
 		var folder:String = songFolder.toLowerCase();
 		var chart:String = chartName.toLowerCase();
+
+		#if sys
+		if (backend.Mods.currentModDirectory != null) {
+			if (FileSystem.exists('mods/' + backend.Mods.currentModDirectory + '/songs/$folder/$chart.json') ||
+				FileSystem.exists('mods/' + backend.Mods.currentModDirectory + '/songs/$folder/chart/chart.json'))
+				return true;
+		}
+		#end
+
 		return FileSystem.exists('assets/songs/$folder/$chart.json')
 			|| FileSystem.exists('mods/songs/$folder/$chart.json')
 			|| FileSystem.exists('assets/songs/$folder/chart/chart.json')
@@ -246,7 +244,7 @@ class FreeplayState extends MusicBeatState
 			PlayState.storyDifficulty = curDifficulty;
 
 			PlayState.storyWeek = songs[curSelected].week;
-			trace('CUR WEEK' + PlayState.storyWeek);
+			//trace('CUR WEEK' + PlayState.storyWeek);
 
 			if (FlxG.sound.music != null)
 				FlxG.sound.music.stop();
@@ -348,7 +346,7 @@ class FreeplayState extends MusicBeatState
 		}
 		//
 
-		trace("curSelected: " + curSelected);
+		//trace("curSelected: " + curSelected);
 
 		changeDiff();
 		changeSongPlaying();
@@ -364,7 +362,7 @@ class FreeplayState extends MusicBeatState
 				{
 					if (!threadActive)
 					{
-						trace("Killing thread");
+						//trace("Killing thread");
 						return;
 					}
 
@@ -373,7 +371,7 @@ class FreeplayState extends MusicBeatState
 					{
 						if (index == curSelected && index != curSongPlaying)
 						{
-							trace("Loading index " + index);
+							//trace("Loading index " + index);
 
 							var inst:Sound = Paths.inst(songs[curSelected].songName);
 
@@ -388,8 +386,8 @@ class FreeplayState extends MusicBeatState
 							else
 								trace("Nevermind, skipping " + index);
 						}
-						else
-							trace("Skipping " + index);
+						//else
+							//trace("Skipping " + index);
 					}
 				}
 			});
@@ -416,9 +414,3 @@ class SongMetadata
 		this.songColor = songColor;
 	}
 }
-
-
-
-
-
-
