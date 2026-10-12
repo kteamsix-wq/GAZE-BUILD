@@ -82,9 +82,9 @@ class FunkinArrows
 				newStaticArrow.updateHitbox();
 				newStaticArrow.antialiasing = false;
 
-				newStaticArrow.addOffset('static', -67 + getOffset(assetModifier, 'staticNote', staticArrowType)[0], -50 + getOffset(assetModifier, 'staticNote', staticArrowType)[1]);
-				newStaticArrow.addOffset('pressed', -67 + getOffset(assetModifier, 'pressed', staticArrowType)[0], -50 + getOffset(assetModifier, 'pressed', staticArrowType)[1]);
-				newStaticArrow.addOffset('confirm', -67 + getOffset(assetModifier, 'confirm', staticArrowType)[0], -50 + getOffset(assetModifier, 'confirm', staticArrowType)[1]);
+				newStaticArrow.addOffset('static', getOffset(assetModifier, 'staticNote', staticArrowType)[0], getOffset(assetModifier, 'staticNote', staticArrowType)[1]);
+				newStaticArrow.addOffset('pressed', getOffset(assetModifier, 'pressed', staticArrowType)[0], getOffset(assetModifier, 'pressed', staticArrowType)[1]);
+				newStaticArrow.addOffset('confirm', getOffset(assetModifier, 'confirm', staticArrowType)[0], getOffset(assetModifier, 'confirm', staticArrowType)[1]);
 
 			case 'chart editor':
 				newStaticArrow.loadGraphic(Paths.image('UI/forever/base/chart editor/note_array'), true, 157, 156);
@@ -115,23 +115,14 @@ class FunkinArrows
 				// so these had a little problem honestly and they make me wanna off(set) myself so the middle notes basically
 				// have slightly different offsets than the side notes (which have the same offset)
 
-				var offsetMiddleX = 0;
-				var offsetMiddleY = 0;
-				if (staticArrowType > 0 && staticArrowType < 3)
-				{
-					offsetMiddleX = 2;
-					offsetMiddleY = 2;
-					if (staticArrowType == 1)
-					{
-						offsetMiddleX -= 1;
-						offsetMiddleY += 2;
-					}
-				}
-
 				newStaticArrow.addOffset('static', getOffset(assetModifier, 'staticNote', staticArrowType)[0], getOffset(assetModifier, 'staticNote', staticArrowType)[1]);
-				newStaticArrow.addOffset('pressed', -2 + getOffset(assetModifier, 'pressed', staticArrowType)[0], -2 + getOffset(assetModifier, 'pressed', staticArrowType)[1]);
-				newStaticArrow.addOffset('confirm', 36 + offsetMiddleX + getOffset(assetModifier, 'confirm', staticArrowType)[0], 36 + offsetMiddleY + getOffset(assetModifier, 'confirm', staticArrowType)[1]);
+				newStaticArrow.addOffset('pressed', getOffset(assetModifier, 'pressed', staticArrowType)[0], getOffset(assetModifier, 'pressed', staticArrowType)[1]);
+				newStaticArrow.addOffset('confirm', getOffset(assetModifier, 'confirm', staticArrowType)[0], getOffset(assetModifier, 'confirm', staticArrowType)[1]);
 		}
+
+		newStaticArrow.playAnim('static');
+		newStaticArrow.updateHitbox();
+		newStaticArrow.baseScale.copyFrom(newStaticArrow.scale);
 
 		return newStaticArrow;
 	}
@@ -169,6 +160,7 @@ class FunkinArrows
 			} else {
 				off = getOffset(assetModifier, 'note', noteData);
 			}
+			
 			if (off[0] != 0 || off[1] != 0) {
 				newNote.addOffset(newNote.animation.curAnim.name, off[0], off[1]);
 				newNote.playAnim(newNote.animation.curAnim.name);
@@ -186,6 +178,7 @@ class Note extends FunkinSprites
 
 	public var mustPress:Bool = false;
 	public var noteData:Int = 0;
+	public var playfield:Int = 0;
 	public var noteAlt:Float = 0;
 	public var noteType:Float = 0;
 	public var noteString:String = "";
@@ -212,6 +205,14 @@ class Note extends FunkinSprites
 	public var childrenNotes:Array<Note> = [];
 
 	public static var swagWidth:Float = 160 * 0.7;
+
+	// modchart fields
+	public var multSpeed:Float = 1.0;
+	public var alphaMod:Float = 1.0;
+	public var lane:Int = 0;
+	public var isSustainEnd:Bool = false;
+	public var baseScale:flixel.math.FlxPoint = new flixel.math.FlxPoint(0.7, 0.7);
+	public var rgbGraphics:Dynamic = {flash: 0.0, alpha: 1.0};
 
 	// it has come to this.
 	public var endHoldOffset:Float = Math.NEGATIVE_INFINITY;
@@ -323,6 +324,8 @@ class Note extends FunkinSprites
 
 		if (isSustainNote && prevNote != null)
 		{
+			newNote.isSustainEnd = true;
+			if (prevNote.isSustainNote) prevNote.isSustainEnd = false;
 			newNote.noteSpeed = prevNote.noteSpeed;
 			newNote.alpha = (Init.trueSettings.get('Alpha Holds')) ? 1 : 0.6;
 			newNote.animation.play(UIStaticArrow.getColorFromNumber(noteData) + 'holdend');
@@ -332,8 +335,10 @@ class Note extends FunkinSprites
 				prevNote.animation.play(UIStaticArrow.getColorFromNumber(prevNote.noteData) + 'hold');
 				prevNote.scale.y *= Conductor.stepCrochet / 100 * 1.05 * prevNote.noteSpeed;
 				prevNote.updateHitbox();
+				prevNote.baseScale.set(prevNote.scale.x, prevNote.scale.y);
 			}
 		}
+		newNote.baseScale.set(newNote.scale.x, newNote.scale.y);
 		return newNote;
 	}
 
@@ -429,6 +434,8 @@ class Note extends FunkinSprites
 
 		if (isSustainNote && prevNote != null)
 		{
+			newNote.isSustainEnd = true;
+			if (prevNote.isSustainNote) prevNote.isSustainEnd = false;
 			newNote.noteSpeed = prevNote.noteSpeed;
 			newNote.alpha = (Init.trueSettings.get('Alpha Holds')) ? 1 : 0.6;
 			newNote.animation.play('holdend');
@@ -440,8 +447,10 @@ class Note extends FunkinSprites
 
 				prevNote.scale.y *= Conductor.stepCrochet / 100 * (43 / 52) * 1.05 * prevNote.noteSpeed;
 				prevNote.updateHitbox();
+				prevNote.baseScale.set(prevNote.scale.x, prevNote.scale.y);
 			}
 		}
+		newNote.baseScale.set(newNote.scale.x, newNote.scale.y);
 
 		return newNote;
 	}
@@ -464,7 +473,6 @@ class UIStaticArrow extends FlxSprite
 	public var animOffsets:Map<String, Array<Dynamic>>;
 	public var babyArrowType:Int = 0;
 	public var canFinishAnimation:Bool = true;
-	public var holdCoverTimer:Float = 0;
 
 	public var initialX:Int;
 	public var initialY:Int;
@@ -475,6 +483,16 @@ class UIStaticArrow extends FlxSprite
 
 	public var setAlpha:Float = (Init.trueSettings.get('Alpha Arrows')) ? 1 : 0.8;
 
+	// modchart fields
+	public var noteData(get, set):Int;
+	inline function get_noteData():Int return babyArrowType;
+	inline function set_noteData(val:Int):Int return babyArrowType = val;
+
+	public var lane:Int = 0;
+	public var alphaMod:Float = 1.0;
+	public var baseScale:flixel.math.FlxPoint = new flixel.math.FlxPoint(0.7, 0.7);
+	public var rgbGraphics:Dynamic = {flash: 0.0, alpha: 1.0};
+
 	public function new(x:Float, y:Float, ?babyArrowType:Int = 0)
 	{
 		// this extension is just going to rely a lot on preexisting code as I wanna try to write an extension before I do options and stuff
@@ -484,6 +502,7 @@ class UIStaticArrow extends FlxSprite
 		this.babyArrowType = babyArrowType;
 
 		updateHitbox();
+		baseScale.set(0.7, 0.7);
 		scrollFactor.set();
 	}
 
@@ -496,19 +515,32 @@ class UIStaticArrow extends FlxSprite
 			alpha = setAlpha;
 
 		animation.play(AnimName, Force, Reversed, Frame);
-		updateHitbox();
+		
+		centerOffsets();
+		centerOrigin();
 
 		var daOffset = animOffsets.get(AnimName);
 		if (animOffsets.exists(AnimName))
 		{
-			offset.set(daOffset[0], daOffset[1]);
+			offset.x += daOffset[0];
+			offset.y += daOffset[1];
 		}
-		else
-			offset.set(0, 0);
 	}
 
 	public function addOffset(name:String, x:Float = 0, y:Float = 0)
 		animOffsets[name] = [x, y];
+
+	public function updateOffsets():Void
+	{
+		centerOffsets();
+		centerOrigin();
+		if (animation.curAnim != null && animOffsets.exists(animation.curAnim.name))
+		{
+			var daOffset = animOffsets.get(animation.curAnim.name);
+			offset.x += daOffset[0];
+			offset.y += daOffset[1];
+		}
+	}
 
 	public static final directions:Array<String> = ['left', 'down', 'up', 'right'];
 	public static function getArrowFromNumber(numb:Int) { return directions[numb % directions.length]; }
@@ -522,7 +554,6 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 {
 	public var receptors:FlxTypedGroup<UIStaticArrow>;
 	public var splashNotes:FlxTypedGroup<NoteSplash>;
-	public var holdCovers:FlxTypedGroup<HoldCover>;
 	public var notesGroup:FlxTypedGroup<Note>;
 	public var holdsGroup:FlxTypedGroup<Note>;
 	public var allNotes:FlxTypedGroup<Note>;
@@ -531,6 +562,7 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 	public var character:Character;
 	public var playState:PlayState;
 	public var displayJudgements:Bool = false;
+	public var player:Int = 0;
 
 	public function new(x:Float = 0, playState:PlayState, ?character:Character, ?displayJudgements:Bool = true, ?autoplay:Bool = true,
 			?noteSplashes:Bool = false, ?keyAmount:Int = 4, ?downscroll:Bool = false, ?parent:Strumline)
@@ -539,7 +571,6 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 
 		receptors = new FlxTypedGroup<UIStaticArrow>();
 		splashNotes = new FlxTypedGroup<NoteSplash>();
-		holdCovers = new FlxTypedGroup<HoldCover>();
 		notesGroup = new FlxTypedGroup<Note>();
 		holdsGroup = new FlxTypedGroup<Note>();
 		allNotes = new FlxTypedGroup<Note>();
@@ -548,11 +579,13 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 		this.character = character;
 		this.playState = playState;
 		this.displayJudgements = displayJudgements;
+		this.player = (autoplay ? 1 : 0);
 
 		for (i in 0...keyAmount)
 		{
 			var staticArrow:UIStaticArrow = FunkinArrows.generateUIArrows(-25 + x, 25 + (downscroll ? FlxG.height - 200 : 0), i, PlayState.assetModifier);
 			staticArrow.ID = i;
+			staticArrow.lane = this.player;
 
 			staticArrow.x -= ((keyAmount / 2) * Note.swagWidth);
 			staticArrow.x += (Note.swagWidth * i);
@@ -566,15 +599,11 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 
 			staticArrow.alpha = 0;
 			FlxTween.tween(staticArrow, {y: staticArrow.initialY, alpha: staticArrow.setAlpha}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
-			
-			var hCover = new HoldCover(i, PlayState.assetModifier);
-			holdCovers.add(hCover);
 		}
 
 		add(receptors);
 		add(holdsGroup);
 		add(notesGroup);
-		add(holdCovers);
 		if (noteSplashes)
 			add(splashNotes);
 	}
@@ -582,63 +611,6 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 	override public function update(elapsed:Float)
 	{
 		super.update(elapsed);
-
-		if (holdCovers != null)
-		{
-			for (i in 0...receptors.members.length)
-			{
-				var receptor = receptors.members[i];
-				var cover = holdCovers.members[i];
-				
-				if (receptor != null && cover != null)
-				{
-					receptor.holdCoverTimer -= elapsed;
-					if (receptor.holdCoverTimer > 0)
-					{
-						if (!cover.visible)
-						{
-							cover.visible = true;
-							if (cover.animation.getByName('start') != null)
-								cover.animation.play('start');
-							else
-								cover.animation.play('hold');
-						}
-						else
-						{
-							if (cover.animation.name == 'start' && cover.animation.finished)
-								cover.animation.play('hold');
-							else if (cover.animation.name != 'start' && cover.animation.name != 'hold')
-								cover.animation.play('hold');
-						}
-						
-						cover.updateHitbox();
-						cover.setPosition(receptor.x + (receptor.width / 2) - (cover.width / 2) - 13, receptor.y + (receptor.height / 2) - (cover.height / 2) + 23);
-						if (PlayState.assetModifier != 'pixel') cover.y += 20;
-					}
-					else if (cover.visible)
-					{
-						if (cover.animation.name == 'hold' || cover.animation.name == 'start')
-						{
-							if (displayJudgements)
-								cover.animation.play('end');
-							else
-								cover.visible = false;
-						}
-						else if (cover.animation.finished)
-						{
-							cover.visible = false;
-						}
-						
-						if (cover.visible)
-						{
-							cover.updateHitbox();
-							cover.setPosition(receptor.x + (receptor.width / 2) - (cover.width / 2) - 13, receptor.y + (receptor.height / 2) - (cover.height / 2) + 23);
-							if (PlayState.assetModifier != 'pixel') cover.y += 20;
-						}
-					}
-				}
-			}
-		}
 	}
 
 	public function createSplash(coolNote:Note)
@@ -646,20 +618,64 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 		if (Init.trueSettings.get('Disable Note Splashes')) return;
 		
 		var splash:NoteSplash = splashNotes.recycle(NoteSplash);
-		splash.setupNoteSplash(coolNote.noteData, PlayState.assetModifier, PlayState.changeableSkin);
+		splash.playSplash(coolNote.noteData, PlayState.assetModifier, PlayState.changeableSkin);
 		var receptor = receptors.members[coolNote.noteData];
 		splash.setPosition(receptor.x - (splash.width / 4), receptor.y - (splash.height / 4));
-		
-		var noteSplashRandom:String = (Std.string((FlxG.random.int(0, 1) + 1)));
-		splash.playAnim('anim' + noteSplashRandom, true);
 	}
 
 	public function push(newNote:Note)
 	{
+		newNote.lane = this.player;
 		var chosenGroup = (newNote.isSustainNote ? holdsGroup : notesGroup);
 		chosenGroup.add(newNote);
 		allNotes.add(newNote);
 		chosenGroup.sort(sortByStrumTime, (!Init.trueSettings.get('Downscroll')) ? FlxSort.DESCENDING : FlxSort.ASCENDING);
+	}
+
+	public function resetStrumline(skipTween:Bool = false):Void
+	{
+		for (n in allNotes.members)
+		{
+			if (n != null)
+			{
+				n.kill();
+				n.destroy();
+			}
+		}
+		allNotes.clear();
+		notesGroup.clear();
+		holdsGroup.clear();
+
+		var isDownscroll:Bool = Init.trueSettings.get('Downscroll');
+		for (i in 0...receptors.members.length)
+		{
+			var staticArrow:UIStaticArrow = receptors.members[i];
+			if (staticArrow == null) continue;
+
+			staticArrow.playAnim('static');
+			staticArrow.x = staticArrow.initialX;
+			staticArrow.angle = staticArrow.angleTo;
+
+			FlxTween.cancelTweensOf(staticArrow);
+
+			if (!skipTween)
+			{
+				// V-Slice style rewind / bounce animation:
+				// Arrows start with an offset and tween into place with circOut
+				var offset:Float = isDownscroll ? 45 : -45;
+				staticArrow.y = staticArrow.initialY + offset;
+				staticArrow.alpha = 0;
+				FlxTween.tween(staticArrow, {y: staticArrow.initialY, alpha: staticArrow.setAlpha}, 0.65, {
+					ease: FlxEase.circOut,
+					startDelay: 0.04 * i
+				});
+			}
+			else
+			{
+				staticArrow.y = staticArrow.initialY;
+				staticArrow.alpha = staticArrow.setAlpha;
+			}
+		}
 	}
 
 	static inline function sortByStrumTime(Order:Int, Obj1:Note, Obj2:Note):Int
@@ -670,6 +686,10 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 
 class NoteSplash extends FunkinSprites
 {
+	public var noteData:Int = 0;
+	public var loadedSkin:String = '';
+	public var loadedModifier:String = '';
+
 	public function new()
 	{
 		super(0, 0);
@@ -679,33 +699,55 @@ class NoteSplash extends FunkinSprites
 
 	public function setupNoteSplash(noteData:Int, assetModifier:String = 'base', changeableSkin:String = 'default')
 	{
+		this.noteData = noteData;
 		var skinAsset = Utils.returnSkinAsset('splash', assetModifier, changeableSkin, 'UI/notes');
-		var colors:Array<String> = ['purple', 'blue', 'green', 'red'];
-		var color:String = colors[noteData % colors.length];
 
-		frames = Paths.getSparrowAtlas(skinAsset);
-
-		switch (assetModifier)
+		if (loadedSkin != skinAsset || loadedModifier != assetModifier)
 		{
-			case 'pixel':
-				animation.addByPrefix('anim1', 'splash ' + color + ' 1', 24, false);
-				animation.addByPrefix('anim2', 'splash ' + color + ' 2', 24, false);
+			frames = Paths.getSparrowAtlas(skinAsset);
+			loadedSkin = skinAsset;
+			loadedModifier = assetModifier;
+
+			var colors:Array<String> = ['purple', 'blue', 'green', 'red'];
+			for (i in 0...colors.length)
+			{
+				var color:String = colors[i];
+				switch (assetModifier)
+				{
+					case 'pixel':
+						animation.addByPrefix('anim1_' + i, 'splash ' + color + ' 1', 24, false);
+						animation.addByPrefix('anim2_' + i, 'splash ' + color + ' 2', 24, false);
+						var off1 = FunkinArrows.getOffset(assetModifier, 'splash', i);
+						addOffset('anim1_' + i, -120 + off1[0], -90 + off1[1]);
+						addOffset('anim2_' + i, -120 + off1[0], -90 + off1[1]);
+
+					default:
+						animation.addByPrefix('anim1_' + i, 'note impact 1 ' + color, 24, false);
+						animation.addByPrefix('anim2_' + i, 'note impact 2 ' + color, 24, false);
+						var off2 = FunkinArrows.getOffset(assetModifier, 'splash', i);
+						addOffset('anim1_' + i, -20 + off2[0], -10 + off2[1]);
+						addOffset('anim2_' + i, -20 + off2[0], -10 + off2[1]);
+				}
+			}
+
+			if (assetModifier == 'pixel')
+			{
 				setGraphicSize(Std.int(width * PlayState.daPixelZoom));
 				antialiasing = false;
-
-				var off1 = FunkinArrows.getOffset(assetModifier, 'splash', noteData);
-				addOffset('anim1', -120 + off1[0], -90 + off1[1]);
-				addOffset('anim2', -120 + off1[0], -90 + off1[1]);
-
-			default:
-				animation.addByPrefix('anim1', 'note impact 1 ' + color, 24, false);
-				animation.addByPrefix('anim2', 'note impact 2 ' + color, 24, false);
+			}
+			else
+			{
 				antialiasing = true;
-
-				var off2 = FunkinArrows.getOffset(assetModifier, 'splash', noteData);
-				addOffset('anim1', -20 + off2[0], -10 + off2[1]);
-				addOffset('anim2', -20 + off2[0], -10 + off2[1]);
+			}
+			updateHitbox();
 		}
+	}
+
+	public function playSplash(noteData:Int, assetModifier:String = 'base', changeableSkin:String = 'default')
+	{
+		setupNoteSplash(noteData, assetModifier, changeableSkin);
+		var rand:Int = FlxG.random.int(1, 2);
+		playAnim('anim' + rand + '_' + (noteData % 4), true);
 	}
 
 	override function update(elapsed:Float)
@@ -715,37 +757,10 @@ class NoteSplash extends FunkinSprites
 	}
 
 	override public function playAnim(AnimName:String, Force:Bool = false, Reversed:Bool = false, Frame:Int = 0) {
+		if (AnimName == 'anim1' || AnimName == 'anim2')
+			AnimName = AnimName + '_' + (noteData % 4);
+
 		if (!Init.trueSettings.get('Disable Note Splashes')) visible = true;
 		super.playAnim(AnimName, Force, Reversed, Frame);
-	}
-}
-
-class HoldCover extends FlxSprite
-{
-	public function new(noteData:Int, assetModifier:String = 'base')
-	{
-		super(-20, 30);
-		var colors:Array<String> = ['Purple', 'Blue', 'Green', 'Red'];
-		var color:String = colors[noteData % colors.length];
-
-		var path = '';
-		if (assetModifier == 'pixel') {
-			path = 'UI/notes/pixel/hold/pixelNoteHoldCover';
-			frames = Paths.getSparrowAtlas(path);
-			animation.addByPrefix('hold', 'loop', 12, true);
-			animation.addByPrefix('end', 'explode', 12, false);
-			setGraphicSize(Std.int(width * PlayState.daPixelZoom));
-			antialiasing = false;
-		} else {
-			path = 'UI/notes/default/hold/holdCover' + color;
-			frames = Paths.getSparrowAtlas(path);
-			animation.addByPrefix('start', 'holdCoverStart' + color, 24, false);
-			animation.addByPrefix('hold', 'holdCover' + color, 12, true);
-			animation.addByPrefix('end', 'holdCoverEnd' + color, 24, false);
-			antialiasing = true;
-		}
-
-		visible = false;
-		alpha = 1.0;
 	}
 }

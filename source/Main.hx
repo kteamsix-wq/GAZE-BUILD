@@ -102,6 +102,30 @@ class Main extends Sprite
 
 	public static function switchState(curState:FlxState, target:FlxState)
 	{
+		var stateName:String = Type.getClassName(Type.getClass(target));
+		var splitName = stateName.split('.');
+		stateName = splitName[splitName.length - 1];
+		
+		// If it's not already a ModState, check if there's a custom script overriding this state
+		if (stateName != "ModState" && stateName != "Init" && stateName != "PreloadState")
+		{
+			var modsList = backend.Mods.getModDirectories();
+			var foundScript = false;
+			for (mod in modsList)
+			{
+				if (sys.FileSystem.exists('mods/' + mod + '/data/states/' + stateName + '.hx'))
+				{
+					foundScript = true;
+					break;
+				}
+			}
+			
+			if (foundScript)
+			{
+				target = new backend.ModState(stateName);
+			}
+		}
+
 		mainClassState = Type.getClass(target);
 		if (!FlxTransitionableState.skipNextTransOut)
 		{
@@ -110,7 +134,7 @@ class Main extends Sprite
 				FlxG.switchState(target);
 			});
 			curState.openSubState(transition);
-			return trace('changed state [' + Type.getClassName(Type.getClass(curState)) + ']');
+			return; // trace('changed state [' + Type.getClassName(Type.getClass(curState)) + ']');
 		}
 		FlxTransitionableState.skipNextTransOut = false;
 		FlxG.switchState(target);
@@ -128,6 +152,9 @@ class Main extends Sprite
 			FlxG.drawFramerate = newFramerate;
 			FlxG.updateFramerate = newFramerate;
 		}
+
+		if (FlxG.stage != null)
+			FlxG.stage.frameRate = newFramerate;
 	}
 
 	function onCrash(e:UncaughtErrorEvent):Void

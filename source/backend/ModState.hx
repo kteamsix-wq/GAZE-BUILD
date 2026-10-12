@@ -1,0 +1,115 @@
+package backend;
+
+import backend.MusicBeatState;
+import backend.HScriptHandler;
+import backend.Mods;
+import Paths;
+import flixel.FlxG;
+import flixel.FlxState;
+
+class ModState extends MusicBeatState
+{
+	public var script:HScriptHandler;
+	public var stateName:String;
+
+	public function new(name:String)
+	{
+		super();
+		this.stateName = name;
+	}
+
+	override function create()
+	{
+		super.create();
+
+		var scriptPath = "";
+		// Search in all mod directories
+		var modsList = Mods.getModDirectories();
+		for (mod in modsList)
+		{
+			var path = 'mods/' + mod + '/data/states/' + stateName + '.hx';
+			if (sys.FileSystem.exists(path))
+			{
+				scriptPath = path;
+				backend.Mods.currentModDirectory = mod;
+				break;
+			}
+		}
+
+		if (scriptPath == "")
+		{
+			var fallback = 'assets/data/states/' + stateName + '.hx';
+			if (sys.FileSystem.exists(fallback)) scriptPath = fallback;
+		}
+
+		if (scriptPath != "" && sys.FileSystem.exists(scriptPath))
+		{
+			script = new HScriptHandler(scriptPath);
+			script.setVar('this', this);
+			script.setVar('controls', controls);
+			
+			// Inject additional state-switching capabilities for ModState scripts
+			script.setVar('ModState', backend.ModState);
+			script.setVar('MainMenuState', funkin.states.MainMenuState);
+			script.setVar('TitleState', funkin.states.TitleState);
+			script.setVar('FreeplayState', funkin.states.FreeplayState);
+			script.setVar('OptionsMenuState', funkin.states.OptionsMenuState);
+			script.setVar('OptionsState', funkin.states.OptionsMenuState);
+			script.setVar('CreditsState', funkin.states.CreditsState);
+            script.setVar('StoryMenuState', funkin.states.ModsMenuState);
+            script.setVar('CollectionRoomState', funkin.states.ModsMenuState);
+            
+			script.setVar('add', function(obj:flixel.FlxBasic) { this.add(obj); });
+			script.setVar('insert', function(pos:Int, obj:flixel.FlxBasic) { this.insert(pos, obj); });
+			script.setVar('remove', function(obj:flixel.FlxBasic, splice:Bool = false) { this.remove(obj, splice); });
+			
+			// Also add the function to easily switch states
+			script.setVar('switchState', function(target:FlxState) {
+				Main.switchState(this, target);
+			});
+			
+			script.call('create');
+		}
+		else
+		{
+			trace('Could not find custom state: ' + stateName);
+			// Fallback?
+		}
+	}
+
+	override function update(elapsed:Float)
+	{
+		super.update(elapsed);
+		if (script != null)
+		{
+			script.call('update', [elapsed]);
+		}
+	}
+
+	override function destroy()
+	{
+		if (script != null)
+		{
+			script.call('destroy');
+		}
+		super.destroy();
+	}
+
+	override function stepHit()
+	{
+		super.stepHit();
+		if (script != null)
+		{
+			script.call('stepHit');
+		}
+	}
+
+	override function beatHit()
+	{
+		super.beatHit();
+		if (script != null)
+		{
+			script.call('beatHit');
+		}
+	}
+}

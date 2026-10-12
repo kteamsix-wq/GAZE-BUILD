@@ -81,7 +81,7 @@ class CoolUtil
 			if (!folder.contains('.'))
 				libraryArray.push(folder);
 		}
-		trace(libraryArray);
+		//trace(libraryArray);
 		#end
 
 		if (libraryArray.length == 0) libraryArray.push('default');
@@ -141,5 +141,81 @@ class CoolUtil
 		
 		if (charArray.length == 0) charArray = ['bf', 'dad', 'gf'];
 		return charArray;
+	}
+
+	public static function getStageList():Array<String>
+	{
+		var stageArray:Array<String> = [];
+		var stageMap:Map<String, Bool> = new Map();
+
+		#if sys
+		var directories:Array<String> = ['assets/data/stages'];
+		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory.length > 0) {
+			directories.push('mods/' + backend.Mods.currentModDirectory + '/data/stages');
+		}
+
+		for (path in directories) {
+			if (sys.FileSystem.exists(path)) {
+				for (file in sys.FileSystem.readDirectory(path)) {
+					if (file.endsWith('.json') || file.endsWith('.hx')) {
+						var dotIdx = file.lastIndexOf('.');
+						var name = file.substring(0, dotIdx);
+						if (!stageMap.exists(name)) {
+							stageMap.set(name, true);
+							stageArray.push(name);
+						}
+					}
+				}
+			}
+		}
+		#end
+
+		if (stageArray.length == 0) stageArray = ['stage'];
+		return stageArray;
+	}
+
+	public static function getEaseFromString(ease:Null<String>):flixel.tweens.FlxEase.EaseFunction
+	{
+		if (ease == null) return flixel.tweens.FlxEase.linear;
+		return switch (ease.toLowerCase().trim())
+		{
+			case 'backin': flixel.tweens.FlxEase.backIn;
+			case 'backinout': flixel.tweens.FlxEase.backInOut;
+			case 'backout': flixel.tweens.FlxEase.backOut;
+			case 'bouncein': flixel.tweens.FlxEase.bounceIn;
+			case 'bounceinout': flixel.tweens.FlxEase.bounceInOut;
+			case 'bounceout': flixel.tweens.FlxEase.bounceOut;
+			case 'circin': flixel.tweens.FlxEase.circIn;
+			case 'circinout': flixel.tweens.FlxEase.circInOut;
+			case 'circout': flixel.tweens.FlxEase.circOut;
+			case 'cubein': flixel.tweens.FlxEase.cubeIn;
+			case 'cubeinout': flixel.tweens.FlxEase.cubeInOut;
+			case 'cubeout': flixel.tweens.FlxEase.cubeOut;
+			case 'elasticin': flixel.tweens.FlxEase.elasticIn;
+			case 'elasticinout': flixel.tweens.FlxEase.elasticInOut;
+			case 'elasticout': flixel.tweens.FlxEase.elasticOut;
+			case 'expoin': flixel.tweens.FlxEase.expoIn;
+			case 'expoinout': flixel.tweens.FlxEase.expoInOut;
+			case 'expoout': flixel.tweens.FlxEase.expoOut;
+			case 'quadin': flixel.tweens.FlxEase.quadIn;
+			case 'quadinout': flixel.tweens.FlxEase.quadInOut;
+			case 'quadout': flixel.tweens.FlxEase.quadOut;
+			case 'quartin': flixel.tweens.FlxEase.quartIn;
+			case 'quartinout': flixel.tweens.FlxEase.quartInOut;
+			case 'quartout': flixel.tweens.FlxEase.quartOut;
+			case 'quintin': flixel.tweens.FlxEase.quintIn;
+			case 'quintinout': flixel.tweens.FlxEase.quintInOut;
+			case 'quintout': flixel.tweens.FlxEase.quintOut;
+			case 'sinein': flixel.tweens.FlxEase.sineIn;
+			case 'sineinout': flixel.tweens.FlxEase.sineInOut;
+			case 'sineout': flixel.tweens.FlxEase.sineOut;
+			case 'smoothstepin': flixel.tweens.FlxEase.smoothStepIn;
+			case 'smoothstepinout': flixel.tweens.FlxEase.smoothStepInOut;
+			case 'smoothstepout': flixel.tweens.FlxEase.smoothStepOut;
+			case 'smootherstepin': flixel.tweens.FlxEase.smootherStepIn;
+			case 'smootherstepinout': flixel.tweens.FlxEase.smootherStepInOut;
+			case 'smootherstepout': flixel.tweens.FlxEase.smootherStepOut;
+			default: flixel.tweens.FlxEase.linear;
+		}
 	}
 }

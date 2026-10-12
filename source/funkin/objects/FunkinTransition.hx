@@ -17,10 +17,16 @@ class FunkinTransition extends FlxSubState
 	private var transitionTween:FlxTween;
 	private var finishCallback:Void->Void;
 	private var completed:Bool = false;
+	private var transCamera:FlxCamera;
 
 	public function new(duration:Float, isTransIn:Bool, ?finishCallback:Void->Void)
 	{
 		super();
+
+		transCamera = new FlxCamera();
+		transCamera.bgColor.alpha = 0;
+		FlxG.cameras.add(transCamera, false);
+		this.cameras = [transCamera];
 
 		this.isTransIn = isTransIn;
 		this.finishCallback = finishCallback;
@@ -101,6 +107,13 @@ class FunkinTransition extends FlxSubState
 		transitionTween = null;
 		finishCallback = null;
 		
+		if (transCamera != null)
+		{
+			FlxG.cameras.remove(transCamera);
+			transCamera.destroy();
+			transCamera = null;
+		}
+
 		super.destroy();
 	}
 }

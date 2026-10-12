@@ -23,6 +23,8 @@ class MusicBeatState extends FunkinState
 
 	public var curStep:Int = 0;
 	public var curBeat:Int = 0;
+	public var curDecStep:Float = 0;
+	public var curDecBeat:Float = 0;
 
 	private var controls(get, never):Controls;
 
@@ -82,7 +84,8 @@ class MusicBeatState extends FunkinState
 
 	public function updateBeat():Void
 	{
-		curBeat = Math.floor(curStep / 4);
+		curDecBeat = curDecStep / 4;
+		curBeat = Math.floor(curDecBeat);
 	}
 
 	public function updateCurStep():Void
@@ -101,7 +104,10 @@ class MusicBeatState extends FunkinState
 				break;
 		}
 
-		curStep = lastChange.stepTime + Math.floor((Conductor.songPosition - lastChange.songTime) / Conductor.stepCrochet);
+		var stepC = Conductor.stepCrochet; 
+		if (lastChange.bpm > 0) stepC = ((60 / lastChange.bpm) * 1000) / 4; 
+		curDecStep = lastChange.stepTime + ((Conductor.songPosition - lastChange.songTime) / stepC);
+		curStep = Math.floor(curDecStep);
 	}
 
 	public function stepHit():Void

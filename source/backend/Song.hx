@@ -22,12 +22,16 @@ typedef SwagSong =
 {
 	var song:String;
 	var notes:Array<SwagSection>;
+	var events:Array<Dynamic>;
 	var bpm:Float;
 	var needsVoices:Bool;
 	var speed:Float;
+	var ?defaultSpeed:Float;
 
 	var player1:String;
 	var player2:String;
+	var ?player3:String;
+	var ?gfVersion:String;
 	var stage:String;
 	var noteSkin:String;
 	var assetModifier:String;
@@ -38,12 +42,15 @@ class Song
 {
 	public var song:String;
 	public var notes:Array<SwagSection>;
+	var events:Array<Dynamic>;
 	public var bpm:Float;
 	public var needsVoices:Bool = true;
 	public var speed:Float = 1;
 
 	public var player1:String = 'bf';
 	public var player2:String = 'dad';
+	public var player3:String = 'gf';
+	public var gfVersion:String = 'gf';
 
 	public function new(song, notes, bpm)
 	{
@@ -99,17 +106,26 @@ class Song
 		var bpm:Dynamic = Reflect.field(rawSong, 'bpm');
 		if (bpm == null || bpm <= 0)
 			swagShit.bpm = findFirstBPM(swagShit.notes);
+		if (Reflect.field(rawSong, 'events') == null)
+			swagShit.events = [];
 		if (Reflect.field(rawSong, 'needsVoices') == null)
 			swagShit.needsVoices = true;
 		var speed:Dynamic = Reflect.field(rawSong, 'speed');
 		if (speed == null || speed <= 0)
 			swagShit.speed = 1;
+		swagShit.defaultSpeed = swagShit.speed;
 		if (swagShit.player1 == null)
 			swagShit.player1 = 'bf';
 		if (swagShit.player2 == null)
 			swagShit.player2 = 'dad';
 		if (swagShit.stage == null)
 			swagShit.stage = '';
+		if (swagShit.gfVersion == null)
+			swagShit.gfVersion = (swagShit.player3 != null) ? swagShit.player3 : 'gf';
+		if (swagShit.player3 == null)
+			swagShit.player3 = swagShit.gfVersion;
+		if (swagShit.stage == null || swagShit.stage == '')
+			swagShit.stage = 'stage';
 		swagShit.validScore = true;
 		return swagShit;
 	}

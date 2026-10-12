@@ -50,9 +50,7 @@ class ChartLoader
 						if (songNotes.length > 3 && songNotes[3] != null)
 							daNoteAlt = songNotes[3];
 
-						var gottaHitNote:Bool = mustHitSection;
-						if (rawNoteData > 3)
-							gottaHitNote = !mustHitSection;
+						var gottaHitNote:Bool = (rawNoteData > 3);
 
 						// V-Slice Anti-Stack/Spam Logic: Prevent overlapping notes
 						var isStacked = false;
@@ -81,7 +79,7 @@ class ChartLoader
 						swagNote.sustainLength = susLength;
 						unspawnNotes.push(swagNote);
 
-						var stepSusLength:Int = Std.int(susLength / Conductor.stepCrochet);
+						var stepSusLength:Int = Math.round(susLength / Conductor.stepCrochet);
 						
 						if (stepSusLength > 0)
 						{
@@ -89,10 +87,13 @@ class ChartLoader
 							{
 								oldNote = unspawnNotes[unspawnNotes.length - 1];
 								
-								var sustainTime:Float = daStrumTime + (Conductor.stepCrochet * susNote) + Conductor.stepCrochet;
+								var sustainTime:Float = daStrumTime + (Conductor.stepCrochet * susNote);
 								var sustainNote:Note = FunkinArrows.generateArrow(PlayState.assetModifier, sustainTime, daNoteData, 0, daNoteAlt, true, oldNote);
 								sustainNote.mustPress = gottaHitNote;
 								sustainNote.scrollFactor.set(0, 0);
+								sustainNote.sustainLength = Conductor.stepCrochet;
+								sustainNote.isSustainEnd = (susNote == stepSusLength - 1);
+								sustainNote.parentNote = swagNote;
 
 								unspawnNotes.push(sustainNote);
 							}

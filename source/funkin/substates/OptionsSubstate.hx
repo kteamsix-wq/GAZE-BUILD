@@ -381,9 +381,3 @@ class OptionsSubstate extends MusicBeatSubState
 		}
 	}
 }
-
-
-
-
-
-

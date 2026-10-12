@@ -3,9 +3,7 @@ package funkin.states;
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSprite;
-import flixel.addons.transition.FlxTransitionableState;
 import flixel.effects.FlxFlicker;
-import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
@@ -14,18 +12,21 @@ import flixel.util.FlxColor;
 import backend.MusicBeatState;
 import backend.Discord;
 
-using StringTools;
-
+/**
+ * The main menu screen, handling navigation to different game modes and options.
+ */
 class MainMenuState extends MusicBeatState
 {
 	var menuItems:FlxTypedGroup<FlxSprite>;
 	var curSelected:Int = 0;
+	var lastCurSelected:Int = 0;
 
 	var bg:FlxSprite;
 	var magenta:FlxSprite;
 	var camFollow:FlxObject;
 
 	var optionShit:Array<String> = ['freeplay', 'options', 'credits'];
+	var selectedSomethin:Bool = false;
 
 	override function create()
 	{
@@ -41,8 +42,7 @@ class MainMenuState extends MusicBeatState
 
 		bg = new FlxSprite(-85);
 		bg.loadGraphic(Paths.image('menus/menuBG'));
-		bg.scrollFactor.x = 0;
-		bg.scrollFactor.y = 0.18;
+		bg.scrollFactor.set(0, 0.18);
 		bg.setGraphicSize(Std.int(bg.width * 1.1));
 		bg.updateHitbox();
 		bg.screenCenter();
@@ -50,8 +50,7 @@ class MainMenuState extends MusicBeatState
 		add(bg);
 
 		magenta = new FlxSprite(-85).loadGraphic(Paths.image('menus/menuDesat'));
-		magenta.scrollFactor.x = 0;
-		magenta.scrollFactor.y = 0.18;
+		magenta.scrollFactor.set(0, 0.18);
 		magenta.setGraphicSize(Std.int(magenta.width * 1.1));
 		magenta.updateHitbox();
 		magenta.screenCenter();
@@ -85,96 +84,84 @@ class MainMenuState extends MusicBeatState
 
 		updateSelection();
 
-		menuItems.forEach(function(menuItem:FlxSprite)
-		{
-			var targetX = menuItem.x;
-			if (menuItem.ID % 2 == 0)
-				menuItem.x += 1000;
-			else
-				menuItem.x -= 1000;
-			
-			FlxTween.tween(menuItem, {x: targetX}, 0.15 + (menuItem.ID * 0.25), {ease: FlxEase.expoInOut});
-		});
 
-		var versionShit:FlxText = new FlxText(5, FlxG.height - 18, 0, "K-Slice v" + Main.gameVersion, 12);
-		versionShit.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		versionShit.scrollFactor.set();
-		add(versionShit);
+
+		var versionText:FlxText = new FlxText(5, FlxG.height - 18, 0, "K-Slice v" + Main.gameVersion, 12);
+		versionText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		versionText.scrollFactor.set();
+		add(versionText);
 	}
 
-	var selectedSomethin:Bool = false;
 	override function update(elapsed:Float)
 	{
-		var up_p = controls.UI_UP_P;
-		var down_p = controls.UI_DOWN_P;
-
 		if (!selectedSomethin)
 		{
-			if (up_p)
+			if (controls.UI_UP_P)
 			{
 				curSelected--;
 				FlxG.sound.play(Paths.sound('system/scroll'));
 			}
-			else if (down_p)
+			else if (controls.UI_DOWN_P)
 			{
 				curSelected++;
 				FlxG.sound.play(Paths.sound('system/scroll'));
 			}
 
+			if (flixel.FlxG.keys.justPressed.TAB)
+			{
+				Main.switchState(this, new ModsMenuState());
+			}
+
+			// Wrap around logic
 			if (curSelected < 0)
 				curSelected = optionShit.length - 1;
 			else if (curSelected >= optionShit.length)
 				curSelected = 0;
-		}
 
-		if ((controls.ACCEPT) && (!selectedSomethin))
-		{
-			selectedSomethin = true;
-			FlxG.sound.play(Paths.sound('system/confirm'));
-
-			FlxFlicker.flicker(magenta, 0.8, 0.1, false);
-
-			menuItems.forEach(function(spr:FlxSprite)
+			if (controls.ACCEPT)
 			{
-				if (curSelected != spr.ID)
-				{
-					FlxTween.tween(spr, {alpha: 0, x: FlxG.width * 2}, 0.4, {
-						ease: FlxEase.quadOut,
-						onComplete: function(twn:FlxTween)
-						{
-							spr.kill();
-						}
-					});
-				}
-				else
-				{
-					FlxFlicker.flicker(spr, 1, 0.06, false, false, function(flick:FlxFlicker)
-					{
-						var daChoice:String = optionShit[curSelected];
+				selectedSomethin = true;
+				FlxG.sound.play(Paths.sound('system/confirm'));
 
-						switch (daChoice)
+				FlxFlicker.flicker(magenta, 0.8, 0.1, false);
+
+				menuItems.forEach(function(spr:FlxSprite)
+				{
+					if (curSelected != spr.ID)
+					{
+						FlxTween.tween(spr, {alpha: 0, x: FlxG.width * 2}, 0.4, {
+							ease: FlxEase.quadOut,
+							onComplete: function(twn:FlxTween) { spr.kill(); }
+						});
+					}
+					else
+					{
+						FlxFlicker.flicker(spr, 1, 0.06, false, false, function(flick:FlxFlicker)
 						{
-							case 'freeplay':
-								Main.switchState(this, new FreeplayState());
-							case 'options':
-								Main.switchState(this, new OptionsMenuState());
-							case 'credits':
-								Main.switchState(this, new CreditsState());
-						}
-					});
-				}
-			});
+							switch (optionShit[curSelected])
+							{
+								case 'freeplay':
+									Main.switchState(this, new FreeplayState());
+								case 'options':
+									Main.switchState(this, new OptionsMenuState());
+								case 'credits':
+									Main.switchState(this, new CreditsState());
+							}
+						});
+					}
+				});
+			}
 		}
 
 		if (curSelected != lastCurSelected)
 			updateSelection();
 
 		super.update(elapsed);
-
 	}
 
-	var lastCurSelected:Int = 0;
-
+	/**
+	 * Updates the visually selected item in the menu and camera focus.
+	 */
 	private function updateSelection():Void
 	{
 		menuItems.forEach(function(spr:FlxSprite):Void {

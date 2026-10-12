@@ -102,8 +102,8 @@ class Timings
 				comboDisplay = 'SDCB';
 		}
 
-		if (PlayState.uiHUD != null)
-			PlayState.uiHUD.updateScoreText();
+		if (PlayState.instance != null)
+			PlayState.instance.updateScoreText();
 	}
 
 	public static inline function getAccuracy():Float

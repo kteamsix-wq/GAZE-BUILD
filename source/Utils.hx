@@ -1,68 +1,64 @@
 package;
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
 
 import flixel.FlxG;
 import flixel.sound.FlxSound;
-import Assets;
 import sys.FileSystem;
 
 /**
-	This class is used as an extension to many other forever engine stuffs, please don't delete it as it is not only exclusively used in forever engine
-	custom stuffs, and is instead used globally.
-**/
+ * Utility functions used globally across the engine.
+ */
 class Utils
 {
-	// set up maps and stuffs
-	public static function resetMenuMusic(resetVolume:Bool = false)
+	/**
+	 * Resets and plays the main menu music if it's not currently playing.
+	 */
+	public static function resetMenuMusic()
 	{
-		// make sure the music is playing
-		if (((FlxG.sound.music != null) && (!FlxG.sound.music.playing)) || (FlxG.sound.music == null))
+		// Make sure the music is playing
+		if (FlxG.sound.music == null || !FlxG.sound.music.playing)
 			FlxG.sound.playMusic(Paths.music("system/freakyMenu"));
-		//
 	}
 
-		public static function returnSkinAsset(asset:String, assetModifier:String = 'base', changeableSkin:String = 'default', baseLibrary:String,
+	/**
+	 * Resolves a skin asset path based on modifiers and libraries.
+	 * Checks multiple path combinations and returns the first existing one.
+	 */
+	public static function returnSkinAsset(asset:String, assetModifier:String = 'base', changeableSkin:String = 'default', baseLibrary:String,
 			?defaultChangeableSkin:String = 'default', ?defaultBaseAsset:String = 'base'):String
 	{
-		var realAsset = '$baseLibrary/$changeableSkin/$assetModifier/$asset';
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
-		
-		realAsset = '$baseLibrary/$assetModifier/$asset';
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
+		var possiblePaths:Array<String> = [
+			'$baseLibrary/$changeableSkin/$assetModifier/$asset',
+			'$baseLibrary/$assetModifier/$asset',
+			'$baseLibrary/$changeableSkin/$asset',
+			'$baseLibrary/$defaultChangeableSkin/$assetModifier/$asset',
+			'$baseLibrary/$defaultChangeableSkin/$asset',
+			'$baseLibrary/$defaultBaseAsset/$asset',
+			'$baseLibrary/$asset',
+			asset
+		];
 
-		realAsset = '$baseLibrary/$changeableSkin/$asset';
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
+		for (path in possiblePaths)
+		{
+			if (sys.FileSystem.exists(Paths.getPath('images/' + path + '.png', IMAGE)))
+				return path;
+		}
 
-		realAsset = '$baseLibrary/$defaultChangeableSkin/$assetModifier/$asset';
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
-		
-		realAsset = '$baseLibrary/$defaultChangeableSkin/$asset';
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
-		
-		realAsset = '$baseLibrary/$defaultBaseAsset/$asset';
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
-
-				realAsset = "$baseLibrary/$asset";
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
-		
-		realAsset = asset;
-		if (sys.FileSystem.exists(Paths.getPath('images/' + realAsset + '.png', IMAGE))) return realAsset;
-
+		// Fallback to the most specific path if none exist (might cause an error downstream if truly missing)
 		return "$baseLibrary/$changeableSkin/$assetModifier/$asset";
 	}
 
+	/**
+	 * Stops and destroys an array of sound objects, safely freeing up memory.
+	 */
 	public static function killMusic(songsArray:Array<FlxSound>)
 	{
-		for (i in 0...songsArray.length)
+		for (song in songsArray)
 		{
-			songsArray[i].stop();
-			songsArray[i].destroy();
+			if (song != null)
+			{
+				song.stop();
+				song.destroy();
+			}
 		}
 	}
 }
-

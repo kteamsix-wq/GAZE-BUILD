@@ -25,7 +25,7 @@ function update(elapsed) {
 
 }
 
-function stepHit(curStep) {
+function stepHit(curStep) { sys.io.File.saveContent("crashes/steptest.txt", "stepHit works: " + curStep);
 
 }
 

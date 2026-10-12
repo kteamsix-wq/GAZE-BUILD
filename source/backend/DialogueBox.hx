@@ -1,14 +1,4 @@
 package backend;
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Assets;
-import Init;
 
 import flixel.FlxBasic;
 import flixel.FlxG;
@@ -23,6 +13,7 @@ import flixel.util.FlxTimer;
 import funkin.objects.FunkinSprites;
 import funkin.objects.Alphabet;
 
+// Define structures for JSON parsing
 typedef PortraitDataDef =
 {
 	var name:String;
@@ -71,8 +62,12 @@ typedef DialogueFileDataDef =
 	var dialogue:Array<DialogueDataDef>;
 }
 
+/**
+ * Handles in-game dialogues, parsing dialogue JSONs and managing the dialogue boxes, portraits, and text rendering.
+ */
 class DialogueBox extends FlxSpriteGroup
 {
+	public var box:FunkinSprites;
 	///
 	/*
 		Epic Dialogue Documentation!
@@ -539,6 +534,7 @@ class DialogueBox extends FlxSpriteGroup
 		super.update(elapsed);
 	}
 }
+
 
 
 

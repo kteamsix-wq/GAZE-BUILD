@@ -54,7 +54,7 @@ class FunkinMemory
 	 */
 	public static function purgeCache(callGarbageCollector:Bool = false):Void
 	{
-		trace('CLEARING CACHE: Disposing all cached textures, assets and sounds...');
+		//trace('CLEARING CACHE: Disposing all cached textures, assets and sounds...');
 
 		preparePurgeTextureCache();
 		purgeTextureCache();

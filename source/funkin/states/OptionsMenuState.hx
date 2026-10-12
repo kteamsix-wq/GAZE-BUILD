@@ -68,7 +68,7 @@ class OptionsMenuState extends MusicBeatState
 					['Note Config', null],
 					['', null],
 					['Controller Mode', getFromOption],
-					['Downscroll (temp disable)', doNothingOption],
+					['Downscroll', getFromOption],
 					['Centered Notefield', getFromOption],
 					['Ghost Tapping', getFromOption],
 					['', null],
@@ -209,12 +209,7 @@ class OptionsMenuState extends MusicBeatState
 		// wow thats a dumb check lmao
 
 		// skip line if the selected script is null (indicates line break)
-			for (i in 0...activeSubgroup.length) {
-			if (activeSubgroup.members[i].text == 'Downscroll (temp desactivated)') {
-				activeSubgroup.members[i].alpha = 0.4;
-				if (currentAttachmentMap != null) setAttachmentAlpha(currentAttachmentMap.get(activeSubgroup.members[i]), 0.4);
-			}
-		}
+			
 
 		if (curSelectedScript == null)
 			selectOption(curSelection + directionIncrement, false);
@@ -569,3 +564,4 @@ class OptionsMenuState extends MusicBeatState
 		}
 	}
 }
+

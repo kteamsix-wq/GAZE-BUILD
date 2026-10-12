@@ -68,6 +68,9 @@
 
 	<!-- ______________________________ Haxedefines _____________________________ -->
 
+	<!-- Fix for SDK "macosx26" (or similar) cannot be located error on latest macOS runners -->
+	<haxedef name="MACOSX_VER" value="" if="mac" />
+
 	<!--Optimise inputs, be careful you will get null errors if you don't use conditionals in your game-->
 	<haxedef name="FLX_NO_TOUCH" if="desktop" />
 

@@ -19,7 +19,7 @@ class HealthIcon extends FlxSprite
 
 	public var isPixelIcon:Bool = false;
 
-	public function new(char:String = 'bf', isPlayer:Bool = false)
+	public function new(char:String = 'placeman', isPlayer:Bool = false)
 	{
 		super();
 		this.isPlayer = isPlayer;
@@ -41,17 +41,17 @@ class HealthIcon extends FlxSprite
 		// 1. Try exact character icon
 		// 2. Try trimmed character icon (e.g., 'bf-car' -> 'bf')
 		// 3. Fallback to 'face'
-		if (!FileSystem.exists(Paths.getPath('images/icons/icon-' + iconPath + '.png', IMAGE)))
+		if (!FileSystem.exists(Paths.getPath('images/UI/icons/' + iconPath + '.png', IMAGE)))
 		{
 			iconPath = trimmedCharacter;
-			if (!FileSystem.exists(Paths.getPath('images/icons/icon-' + iconPath + '.png', IMAGE)))
+			if (!FileSystem.exists(Paths.getPath('images/UI/icons/' + iconPath + '.png', IMAGE)))
 			{
-				iconPath = 'face';
+				iconPath = 'placeman';
 				trace('Icon for "$char" not found, falling back to "$iconPath"');
 			}
 		}
 
-		var iconGraphic:FlxGraphic = Paths.image('icons/icon-' + iconPath);
+		var iconGraphic:FlxGraphic = Paths.image('UI/icons/' + iconPath);
 		
 		// Auto-calculate frame count based on graphic proportions
 		var frameCount:Int = Math.round(iconGraphic.width / iconGraphic.height);

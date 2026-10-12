@@ -1,34 +1,14 @@
 package backend;
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Assets;
-import Init;
 
 import flixel.FlxG;
-import flixel.FlxG;
-import flixel.input.FlxInput;
 import flixel.input.FlxInput;
 import flixel.input.actions.FlxAction;
-import flixel.input.actions.FlxAction;
-import flixel.input.actions.FlxActionInput;
 import flixel.input.actions.FlxActionInput;
 import flixel.input.actions.FlxActionInputDigital;
-import flixel.input.actions.FlxActionInputDigital;
-import flixel.input.actions.FlxActionManager;
 import flixel.input.actions.FlxActionManager;
 import flixel.input.actions.FlxActionSet;
-import flixel.input.actions.FlxActionSet;
-import flixel.input.gamepad.FlxGamepadButton;
 import flixel.input.gamepad.FlxGamepadButton;
 import flixel.input.gamepad.FlxGamepadInputID;
-import flixel.input.gamepad.FlxGamepadInputID;
-import flixel.input.keyboard.FlxKey;
 import flixel.input.keyboard.FlxKey;
 
 enum abstract Action(String) to String from String
@@ -64,6 +44,9 @@ enum abstract Action(String) to String from String
 	var CHEAT = "cheat";
 }
 
+/**
+ * Defines various input methods (Keyboard, Gamepad).
+ */
 enum Device
 {
 	Keys;
@@ -101,8 +84,9 @@ enum KeyboardScheme
 }
 
 /**
- * A list of actions that a player would invoke via some input device.
- * Uses FlxActions to funnel various inputs to a single action.
+ * A comprehensive list of actions that a player would invoke via some input device.
+ * Uses FlxActions to funnel various inputs from keyboard or gamepad to a single action event.
+ * Handles rebinding, input mappings, and querying for game input state.
  */
 class Controls extends FlxActionSet
 {
@@ -846,6 +830,7 @@ class Controls extends FlxActionSet
 		return input.device == GAMEPAD && (deviceID == FlxInputDeviceID.ALL || input.deviceID == deviceID);
 	}
 }
+
 
 
 

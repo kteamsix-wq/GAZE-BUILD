@@ -1,4 +1,4 @@
-﻿package backend;
+package backend;
 import backend.*;
 import funkin.objects.*;
 import funkin.objects.FunkinArrows;
@@ -61,7 +61,7 @@ class Highscore
 
 	public static function formatSong(song:String, diff:Int):String
 	{
-		var daSong:String = song;
+		var daSong:String = song.toLowerCase();
 
 		var difficulty:String = '-' + CoolUtil.difficultyFromNumber(diff).toLowerCase();
 		difficulty = difficulty.replace('-normal', '');
@@ -95,3 +95,4 @@ class Highscore
 		}
 	}
 }
+

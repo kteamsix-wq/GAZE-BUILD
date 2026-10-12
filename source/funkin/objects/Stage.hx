@@ -30,7 +30,7 @@ import haxe.Json;
 
 #if sys
 import hscript.Parser;
-import hscript.Interp;
+import backend.HScriptHandler.CustomInterp;
 #end
 
 using StringTools;
@@ -54,8 +54,10 @@ class Stage extends FlxTypedGroup<FlxBasic>
 	public var background:FlxTypedGroup<FlxSprite> = new FlxTypedGroup<FlxSprite>();
 	public var foreground:FlxTypedGroup<FlxSprite> = new FlxTypedGroup<FlxSprite>();
 
+	public var inCreatePost:Bool = false;
+
 	#if sys
-	public var interp:Interp;
+	public var interp:CustomInterp;
 	#end
 
 	public function new(curStage:String)
@@ -65,12 +67,15 @@ class Stage extends FlxTypedGroup<FlxBasic>
 
 		if (PlayState.determinedChartType == "FNF")
 		{
-			switch (CoolUtil.spaceToDash(PlayState.SONG.song.toLowerCase()))
+			if (this.curStage == null || this.curStage == "")
 			{
-				default:
-					this.curStage = 'stage';
+				switch (CoolUtil.spaceToDash(PlayState.SONG.song.toLowerCase()))
+				{
+					default:
+						this.curStage = 'stage';
+				}
+				PlayState.curStage = this.curStage;
 			}
-			PlayState.curStage = this.curStage;
 		}
 
 		loadStageData();
@@ -115,9 +120,20 @@ class Stage extends FlxTypedGroup<FlxBasic>
 			try {
 				var parser = new Parser();
 				parser.allowTypes = true;
-				var ast = parser.parseString(File.getContent(scriptPath));
+				parser.allowJSON = true;
+				parser.allowMetadata = true;
 
-				interp = new Interp();
+				var scriptText = File.getContent(scriptPath);
+				var strippedText = "";
+				for (line in scriptText.split("\n")) {
+					var trimmed = StringTools.trim(line);
+					if (!StringTools.startsWith(trimmed, "import ") && !StringTools.startsWith(trimmed, "package ")) {
+						strippedText += line + "\n";
+					}
+				}
+				var ast = parser.parseString(strippedText);
+
+				interp = new CustomInterp();
 
 				// Expose useful classes to the script
 				interp.variables.set("Math", Math);
@@ -131,12 +147,127 @@ class Stage extends FlxTypedGroup<FlxBasic>
 				interp.variables.set("PlayState", PlayState);
 				interp.variables.set("Conductor", Conductor);
 				interp.variables.set("CoolUtil", CoolUtil);
+				interp.variables.set("FlxColor", {
+					BLACK: flixel.util.FlxColor.BLACK,
+					WHITE: flixel.util.FlxColor.WHITE,
+					RED: flixel.util.FlxColor.RED,
+					GREEN: flixel.util.FlxColor.GREEN,
+					BLUE: flixel.util.FlxColor.BLUE,
+					TRANSPARENT: flixel.util.FlxColor.TRANSPARENT,
+					fromRGB: flixel.util.FlxColor.fromRGB,
+					fromString: flixel.util.FlxColor.fromString
+				});
+				interp.variables.set("FlxEase", flixel.tweens.FlxEase);
 				
-				// Expose stage properties and add() function (adds to background by default to match old behavior)
+				// Shader Classes & Helpers
+				interp.variables.set("FunkinShader", backend.FunkinShader.FunkinShaderImpl);
+				interp.variables.set("FlxRuntimeShader", flixel.addons.display.FlxRuntimeShader);
+				interp.variables.set("ShaderFilter", openfl.filters.ShaderFilter);
+				interp.variables.set("createShader", function(frag:String, ?vert:String) {
+					return backend.FunkinShader.FunkinShaderImpl.fromFile(frag, vert);
+				});
+				interp.variables.set("setCameraShader", function(camera:flixel.FlxCamera, shader:Dynamic) {
+					if (camera == null) return;
+					if (shader == null) camera.filters = null;
+					else camera.filters = [new openfl.filters.ShaderFilter(shader)];
+				});
+				interp.variables.set("addCameraShader", function(camera:flixel.FlxCamera, shader:Dynamic) {
+					if (camera == null || shader == null) return;
+					var f = new openfl.filters.ShaderFilter(shader);
+					if (camera.filters == null) camera.filters = [f];
+					else camera.filters.push(f);
+				});
+				interp.variables.set("clearCameraShaders", function(camera:flixel.FlxCamera) {
+					if (camera != null) camera.filters = null;
+				});
+				interp.variables.set("tweenShader", function(shader:Dynamic, uniform:String, arg1:Float, ?arg2:Dynamic, ?arg3:Dynamic, ?arg4:Dynamic, ?arg5:Dynamic) {
+					return backend.FunkinShader.FunkinShaderImpl.tweenAnyShader(shader, uniform, arg1, arg2, arg3, arg4, arg5);
+				});
+				interp.variables.set("cancelShaderTween", function(shader:Dynamic, ?uniform:String) {
+					backend.FunkinShader.FunkinShaderImpl.cancelAnyShaderTween(shader, uniform);
+				});
+
+				if (PlayState.instance != null) {
+					interp.variables.set("game", PlayState.instance);
+					interp.variables.set("camGame", PlayState.camGame);
+					interp.variables.set("camHUD", PlayState.camHUD);
+					interp.variables.set("camAlt", PlayState.camAlt);
+					interp.variables.set("boyfriend", PlayState.boyfriend);
+					interp.variables.set("dad", PlayState.dadOpponent);
+					interp.variables.set("dadOpponent", PlayState.dadOpponent);
+					interp.variables.set("gf", PlayState.gf);
+					interp.variables.set("restartSong", function() { if (PlayState.instance != null) PlayState.instance.restartSong(); });
+					interp.variables.set("GameOverSubstate", funkin.substates.GameOverSubstate);
+				}
+
+				// Expose stage properties and add() function
 				interp.variables.set("stage", this);
+				interp.variables.set("add", function(obj:Dynamic) {
+					if (inCreatePost)
+						this.foreground.add(cast obj);
+					else
+						this.background.add(cast obj);
+				});
+				interp.variables.set("remove", function(obj:Dynamic) {
+					this.background.remove(cast obj, true);
+					this.foreground.remove(cast obj, true);
+				});
+				interp.variables.set("insert", function(pos:Int, obj:Dynamic) {
+					if (inCreatePost)
+						this.foreground.insert(pos, cast obj);
+					else
+						this.background.insert(pos, cast obj);
+				});
 				interp.variables.set("background", this.background);
 				interp.variables.set("foreground", this.foreground);
-				interp.variables.set("add", function(obj:FlxSprite) { this.background.add(obj); });
+
+				// Modchart shortcuts
+				interp.variables.set("ModManager", funkin.game.modchart.ModManager);
+				interp.variables.set("Vector3", funkin.backend.math.Vector3);
+				interp.variables.set("MathUtil", funkin.utils.MathUtil);
+				interp.variables.set("modManager", PlayState.instance != null ? PlayState.instance.modManager : null);
+				interp.variables.set("queueEase", function(step:Float, endStep:Float, modName:String, target:Float, style:String = 'linear', player:Int = -1, ?startVal:Float) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.queueEase(step, endStep, modName, target, style, player, startVal);
+				});
+				interp.variables.set("queueSet", function(step:Float, modName:String, target:Float, player:Int = -1) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.queueSet(step, modName, target, player);
+				});
+				interp.variables.set("queueEaseP", function(step:Float, endStep:Float, modName:String, percent:Float, style:String = 'linear', player:Int = -1, ?startVal:Float) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.queueEaseP(step, endStep, modName, percent, style, player, startVal);
+				});
+				interp.variables.set("queueSetP", function(step:Float, modName:String, percent:Float, player:Int = -1) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.queueSetP(step, modName, percent, player);
+				});
+				interp.variables.set("queueFunc", function(step:Float, endStep:Float, callback:Dynamic) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.queueFunc(step, endStep, callback);
+				});
+				interp.variables.set("queueFuncOnce", function(step:Float, callback:Dynamic) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.queueFuncOnce(step, callback);
+				});
+				interp.variables.set("setValue", function(modName:String, val:Float, player:Int = -1) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.setValue(modName, val, player);
+				});
+				interp.variables.set("setPercent", function(modName:String, val:Float, player:Int = -1) {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						PlayState.instance.modManager.setPercent(modName, val, player);
+				});
+				interp.variables.set("getValue", function(modName:String, player:Int = 0):Float {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						return PlayState.instance.modManager.getValue(modName, player);
+					return 0.0;
+				});
+				interp.variables.set("getPercent", function(modName:String, player:Int = 0):Float {
+					if (PlayState.instance != null && PlayState.instance.modManager != null)
+						return PlayState.instance.modManager.getPercent(modName, player);
+					return 0.0;
+				});
 
 				interp.execute(ast);
 				callScript("create", []);
@@ -175,11 +306,57 @@ class Stage extends FlxTypedGroup<FlxBasic>
 
 	public function callScript(func:String, args:Array<Dynamic>):Dynamic {
 		#if sys
-		if (interp != null && interp.variables.exists(func)) {
-			try {
-				return Reflect.callMethod(null, interp.variables.get(func), args);
-			} catch (e:Dynamic) {
-				trace('Error calling script function $func: $e');
+		if (interp != null) {
+			if (PlayState.instance != null) {
+				if (PlayState.instance.modManager != null)
+					interp.variables.set("modManager", PlayState.instance.modManager);
+				interp.variables.set("game", PlayState.instance);
+				interp.variables.set("camGame", PlayState.camGame);
+				interp.variables.set("camHUD", PlayState.camHUD);
+				interp.variables.set("camAlt", PlayState.camAlt);
+				interp.variables.set("boyfriend", PlayState.boyfriend);
+				interp.variables.set("dad", PlayState.dadOpponent);
+				interp.variables.set("dadOpponent", PlayState.dadOpponent);
+				interp.variables.set("gf", PlayState.gf);
+			}
+
+			var targetFunc:Dynamic = null;
+			var aliases:Array<String> = [func];
+			if (StringTools.startsWith(func, "on")) {
+				aliases.push(func.charAt(2).toLowerCase() + func.substr(3));
+			} else {
+				aliases.push("on" + func.charAt(0).toUpperCase() + func.substr(1));
+			}
+
+			if (func == "onCreatePost" || func == "createPost" || func == "postCreate" || func == "onPostCreate") {
+				aliases = ["postCreate", "createPost", "onCreatePost", "onPostCreate"];
+			} else if (func == "onCreate" || func == "create") {
+				aliases = ["create", "onCreate"];
+			}
+
+			for (name in aliases) {
+				if (interp.variables.exists(name)) {
+					targetFunc = interp.variables.get(name);
+					if (targetFunc != null && Reflect.isFunction(targetFunc)) break;
+				}
+			}
+
+			var isPost:Bool = (func == "onCreatePost" || func == "createPost" || func == "postCreate" || func == "onPostCreate");
+			var prevPost:Bool = inCreatePost;
+			if (isPost) inCreatePost = true;
+
+			if (targetFunc != null && Reflect.isFunction(targetFunc)) {
+				try {
+					var result = Reflect.callMethod(null, targetFunc, args != null ? args : []);
+					inCreatePost = prevPost;
+					return result;
+				} catch (e:Dynamic) {
+					inCreatePost = prevPost;
+					trace('Error calling script function $func: $e');
+					lime.app.Application.current.window.alert('Error calling script function $func:\n$e', 'Stage Script Error');
+				}
+			} else {
+				inCreatePost = prevPost;
 			}
 		}
 		#end
@@ -223,6 +400,46 @@ class Stage extends FlxTypedGroup<FlxBasic>
 		}
 	}
 
+	override public function add(basic:FlxBasic):FlxBasic
+	{
+		if (inCreatePost)
+		{
+			if (Std.isOfType(basic, FlxSprite))
+				foreground.add(cast basic);
+		}
+		else
+		{
+			if (Std.isOfType(basic, FlxSprite))
+				background.add(cast basic);
+		}
+		return basic;
+	}
+
+	override public function remove(basic:FlxBasic, splice:Bool = false):FlxBasic
+	{
+		if (Std.isOfType(basic, FlxSprite))
+		{
+			background.remove(cast basic, splice);
+			foreground.remove(cast basic, splice);
+		}
+		return basic;
+	}
+
+	override public function insert(position:Int, object:FlxBasic):FlxBasic
+	{
+		if (inCreatePost)
+		{
+			if (Std.isOfType(object, FlxSprite))
+				foreground.insert(position, cast object);
+		}
+		else
+		{
+			if (Std.isOfType(object, FlxSprite))
+				background.insert(position, cast object);
+		}
+		return object;
+	}
+
 	// Note: Flixel might not call update if stageBuild isn't added directly to the state
 	override public function update(elapsed:Float)
 	{
@@ -230,12 +447,12 @@ class Stage extends FlxTypedGroup<FlxBasic>
 	}
 
 	// Used when state isn't adding the group itself, meaning update() doesn't fire naturally
-	public function stageUpdateConstant(elapsed:Float, boyfriend:Boyfriend, gf:Character, dadOpponent:Character)
+	public function stageUpdateConstant(elapsed:Float)
 	{
 		callScript("update", [elapsed]);
 	}
 
-	public function stageUpdate(curBeat:Int, boyfriend:Boyfriend, gf:Character, dadOpponent:Character)
+	public function stageUpdate(curBeat:Int)
 	{
 		callScript("beatHit", [curBeat]);
 	}

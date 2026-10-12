@@ -37,6 +37,14 @@ typedef CharacterFile = {
 	@:optional var healthbar_colors:Array<Int>;
 	
 	@:optional var quickDancer:Null<Bool>;
+
+	@:optional var gameOverChar:String;
+	@:optional var firstDeath:String;
+	@:optional var loopDeath:String;
+	@:optional var confirmDeath:String;
+	@:optional var firstDeathSound:String;
+	@:optional var loopDeathMusic:String;
+	@:optional var confirmDeathSound:String;
 }
 
 typedef CharacterData =
@@ -53,7 +61,7 @@ class Character extends FunkinSprites
 	public var debugMode:Bool = false;
 
 	public var isPlayer:Bool = false;
-	public var curCharacter:String = 'bf';
+	public var curCharacter:String = 'placeman';
 
 	public var holdTimer:Float = 0;
 	public var singDuration:Float = 4;
@@ -64,8 +72,17 @@ class Character extends FunkinSprites
 	public var positionArray:Array<Float> = [0, 0];
 	public var cameraPosition:Array<Float> = [0, 0];
 
+	public var gameOverChar:String = 'bf-dead';
+	public var firstDeathAnim:String = 'firstDeath';
+	public var loopDeathAnim:String = 'deathLoop';
+	public var confirmDeathAnim:String = 'deathConfirm';
+	public var firstDeathSound:String = 'fnf_loss_sfx';
+	public var loopDeathMusic:String = 'gameOver';
+	public var confirmDeathSound:String = 'gameOverEnd';
+
 	public var characterData:CharacterData;
 	public var adjustPos:Bool = true;
+	public var skipDance:Bool = false;
 
 	public function new(?isPlayer:Bool = false)
 	{
@@ -93,117 +110,7 @@ class Character extends FunkinSprites
 		{
 			var rawJson = sys.io.File.getContent(jsonPath);
 			var json:CharacterFile = haxe.Json.parse(rawJson);
-			
-			
-			var animJson = Paths.getPath('images/' + json.image + '/Animation.json', TEXT);
-				flixel.FlxG.log.warn('ANIMJSON PATH IS: ' + animJson);
-			
-			//trace('Anim json path: ' + animJson + ' exists: ' + sys.FileSystem.exists(animJson)); 
-			if (sys.FileSystem.exists(animJson)) {
-				this.frames = animate.FlxAnimateFrames.fromAnimate(Paths.getPath('images/' + json.image, TEXT));
-				
-				try {
-					this.anim.addBySymbol('idle', 'BF idle dance', 24, false);
-				} catch(e:Dynamic) {}
-			} else {
-				loadOptimizedSparrow(json.image);
-			}
-			
-			
-			if (json.scale != null && json.scale != 1)
-			{
-				scale.set(json.scale, json.scale);
-				updateHitbox();
-			}
-			
-			if (json.position != null)
-			{
-				characterData.offsetX = json.position[0];
-				characterData.offsetY = json.position[1];
-				positionArray = json.position;
-			}
-			if (json.camera_position != null)
-			{
-				characterData.camOffsetX = json.camera_position[0];
-				characterData.camOffsetY = json.camera_position[1];
-				cameraPosition = json.camera_position;
-			}
-			
-			if (json.flip_x == true)
-				flipX = true;
-			if (json.no_antialiasing == true)
-				antialiasing = false;
-				
-			if (json.healthicon != null && json.healthicon.length > 0)
-				healthIcon = json.healthicon;
-			if (json.healthbar_colors != null && json.healthbar_colors.length > 2)
-				healthColorArray = json.healthbar_colors;
-				
-			if (json.sing_duration != null && json.sing_duration > 0)
-				singDuration = json.sing_duration;
-				
-			if (json.quickDancer == true)
-				characterData.quickDancer = true;
-				
-			if (json.animations != null && json.animations.length > 0)
-			{
-				for (anim in json.animations)
-				{
-					var animAnim:String = anim.anim;
-					var animName:String = anim.name;
-					var animFps:Int = anim.fps;
-					var animLoop:Bool = anim.loop;
-					var animIndices:Array<Int> = anim.indices;
-					
-					if (animIndices != null && animIndices.length > 0)
-					{
-						
-						if (this.frames != null && (this.frames is animate.FlxAnimateFrames))
-						{
-							var cleanName:String = animName;
-							while(cleanName.length > 0 && StringTools.isSpace(cleanName, cleanName.length - 1) == false && (cleanName.charCodeAt(cleanName.length - 1) >= 48 && cleanName.charCodeAt(cleanName.length - 1) <= 57))
-							{
-								cleanName = cleanName.substring(0, cleanName.length - 1);
-							}
-							
-							if (this.anim.findFrameLabelIndices(cleanName).length > 0) {
-								this.anim.addByFrameLabelIndices(animAnim, cleanName, animIndices, animFps, animLoop);
-							} else {
-								this.anim.addBySymbolIndices(animAnim, cleanName, animIndices, animFps, animLoop);
-							}
-						}
-						else
-						animation.addByIndices(animAnim, animName, animIndices, "", animFps, animLoop);
-					}
-					else
-					{
-						
-						if (this.frames != null && (this.frames is animate.FlxAnimateFrames))
-						{
-							var cleanName:String = animName;
-							while(cleanName.length > 0 && StringTools.isSpace(cleanName, cleanName.length - 1) == false && (cleanName.charCodeAt(cleanName.length - 1) >= 48 && cleanName.charCodeAt(cleanName.length - 1) <= 57))
-							{
-								cleanName = cleanName.substring(0, cleanName.length - 1);
-							}
-							if (this.anim.findFrameLabelIndices(cleanName).length > 0) {
-								
-								
-								this.anim.addByFrameLabel(animAnim, cleanName, animFps, animLoop);
-							} else {
-								
-								this.anim.addBySymbol(animAnim, cleanName, animFps, animLoop);
-							}
-						}
-						else
-						animation.addByPrefix(animAnim, animName, animFps, animLoop);
-					}
-					
-					if (anim.offsets != null && anim.offsets.length > 1)
-						addOffset(animAnim, anim.offsets[0], anim.offsets[1]);
-					else
-						addOffset(animAnim, 0, 0);
-				}
-			}
+			return loadCharacterFile(json, x, y);
 		}
 		else
 		{
@@ -239,9 +146,9 @@ class Character extends FunkinSprites
 				}
 				else
 				{
-					trace("Could not find character JSON! Falling back to bf...");
-					if (curCharacter != 'bf')
-						return setCharacter(this.x, this.y, 'bf');
+					trace("Could not find character JSON! Falling back to placeman...");
+					if (curCharacter != 'placeman')
+						return setCharacter(this.x, this.y, 'placeman');
 					else
 						return this;
 				}
@@ -281,6 +188,168 @@ class Character extends FunkinSprites
 		}
 
 		return this;
+	}
+
+	public function loadCharacterFile(json:CharacterFile, x:Float, y:Float):Character
+	{
+		antialiasing = true;
+
+		characterData = {
+			offsetY: 0,
+			offsetX: 0,
+			camOffsetY: 0,
+			camOffsetX: 0,
+			quickDancer: false
+		};
+
+		var animJson = Paths.getPath('images/' + json.image + '/Animation.json', TEXT);
+		if (sys.FileSystem.exists(animJson)) {
+			this.frames = animate.FlxAnimateFrames.fromAnimate(Paths.getPath('images/' + json.image, TEXT));
+			try {
+				this.anim.addBySymbol('idle', 'BF idle dance', 24, false);
+			} catch(e:Dynamic) {}
+		} else {
+			loadOptimizedSparrow(json.image);
+		}
+		
+		if (json.scale != null && json.scale != 1)
+		{
+			scale.set(json.scale, json.scale);
+			updateHitbox();
+		}
+		
+		if (json.position != null)
+		{
+			characterData.offsetX = json.position[0];
+			characterData.offsetY = json.position[1];
+			positionArray = json.position;
+		}
+		if (json.camera_position != null)
+		{
+			characterData.camOffsetX = json.camera_position[0];
+			characterData.camOffsetY = json.camera_position[1];
+			cameraPosition = json.camera_position;
+		}
+		
+		if (json.flip_x == true)
+			flipX = true;
+		else
+			flipX = false;
+
+		if (json.no_antialiasing == true)
+			antialiasing = false;
+		else
+			antialiasing = true;
+			
+		if (json.healthicon != null && json.healthicon.length > 0)
+			healthIcon = json.healthicon;
+		if (json.healthbar_colors != null && json.healthbar_colors.length > 2)
+			healthColorArray = json.healthbar_colors;
+			
+		if (json.sing_duration != null && json.sing_duration > 0)
+			singDuration = json.sing_duration;
+			
+		if (json.quickDancer == true)
+			characterData.quickDancer = true;
+
+		if (json.gameOverChar != null)
+			gameOverChar = json.gameOverChar;
+		if (json.firstDeath != null)
+			firstDeathAnim = json.firstDeath;
+		if (json.loopDeath != null)
+			loopDeathAnim = json.loopDeath;
+		if (json.confirmDeath != null)
+			confirmDeathAnim = json.confirmDeath;
+		if (json.firstDeathSound != null)
+			firstDeathSound = json.firstDeathSound;
+		if (json.loopDeathMusic != null)
+			loopDeathMusic = json.loopDeathMusic;
+		if (json.confirmDeathSound != null)
+			confirmDeathSound = json.confirmDeathSound;
+			
+		if (json.animations != null && json.animations.length > 0)
+		{
+			for (anim in json.animations)
+			{
+				addAnimationFromData(anim);
+			}
+		}
+
+		dance();
+
+		if (isPlayer)
+		{
+			flipX = !flipX;
+			if (!curCharacter.startsWith('bf'))
+				flipLeftRight();
+		}
+		else if (curCharacter.startsWith('bf'))
+			flipLeftRight();
+
+		if (adjustPos)
+		{
+			this.x = x + characterData.offsetX;
+			this.y = y + (characterData.offsetY - (frameHeight * scale.y));
+		}
+		else
+		{
+			this.x = x + characterData.offsetX;
+			this.y = y + characterData.offsetY;
+		}
+
+		return this;
+	}
+
+	public function addAnimationFromData(anim:CharacterAnim)
+	{
+		var animAnim:String = anim.anim;
+		var animName:String = anim.name;
+		var animFps:Int = anim.fps;
+		var animLoop:Bool = anim.loop;
+		var animIndices:Array<Int> = anim.indices;
+		
+		if (animIndices != null && animIndices.length > 0)
+		{
+			if (this.frames != null && (this.frames is animate.FlxAnimateFrames))
+			{
+				var cleanName:String = animName;
+				while(cleanName.length > 0 && StringTools.isSpace(cleanName, cleanName.length - 1) == false && (cleanName.charCodeAt(cleanName.length - 1) >= 48 && cleanName.charCodeAt(cleanName.length - 1) <= 57))
+				{
+					cleanName = cleanName.substring(0, cleanName.length - 1);
+				}
+				
+				if (this.anim.findFrameLabelIndices(cleanName).length > 0) {
+					this.anim.addByFrameLabelIndices(animAnim, cleanName, animIndices, animFps, animLoop);
+				} else {
+					this.anim.addBySymbolIndices(animAnim, cleanName, animIndices, animFps, animLoop);
+				}
+			}
+			else
+				animation.addByIndices(animAnim, animName, animIndices, "", animFps, animLoop);
+		}
+		else
+		{
+			if (this.frames != null && (this.frames is animate.FlxAnimateFrames))
+			{
+				var cleanName:String = animName;
+				while(cleanName.length > 0 && StringTools.isSpace(cleanName, cleanName.length - 1) == false && (cleanName.charCodeAt(cleanName.length - 1) >= 48 && cleanName.charCodeAt(cleanName.length - 1) <= 57))
+				{
+					cleanName = cleanName.substring(0, cleanName.length - 1);
+				}
+				if (this.anim.findFrameLabelIndices(cleanName).length > 0) {
+					this.anim.addByFrameLabel(animAnim, cleanName, animFps, animLoop);
+				} else {
+					this.anim.addBySymbol(animAnim, cleanName, animFps, animLoop);
+				}
+			}
+			else
+				animation.addByPrefix(animAnim, animName, animFps, animLoop);
+		}
+		
+		if (anim.offsets != null && anim.offsets.length > 1)
+			addOffset(animAnim, anim.offsets[0], anim.offsets[1]);
+		else
+			addOffset(animAnim, 0, 0);
 	}
 
 	override function update(elapsed:Float)
@@ -323,7 +392,7 @@ class Character extends FunkinSprites
 
 	public function dance(?forced:Bool = false)
 	{
-		if (!debugMode)
+		if (!debugMode && !skipDance)
 		{
 			var curCharSimplified:String = simplifyCharacter();
 			switch (curCharSimplified)
