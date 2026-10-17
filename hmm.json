@@ -41,11 +41,9 @@
          "version": null
       },
       {
-         "name": "discord_rpc",
-         "type": "git",
-         "dir": null,
-         "ref": "master",
-         "url": "https://github.com/Aidan63/linc_discord-rpc"
+         "name": "hxdiscord_rpc",
+         "type": "haxelib",
+         "version": "1.3.0"
       },
       {
          "name": "hxCodec",
