@@ -189,6 +189,7 @@ class Stage extends FlxTypedGroup<FlxBasic>
 
 				if (PlayState.instance != null) {
 					interp.variables.set("game", PlayState.instance);
+					interp.variables.set("camGame2", PlayState.camGame2);
 					interp.variables.set("camGame", PlayState.camGame);
 					interp.variables.set("camHUD", PlayState.camHUD);
 					interp.variables.set("camAlt", PlayState.camAlt);
@@ -198,6 +199,26 @@ class Stage extends FlxTypedGroup<FlxBasic>
 					interp.variables.set("gf", PlayState.gf);
 					interp.variables.set("restartSong", function() { if (PlayState.instance != null) PlayState.instance.restartSong(); });
 					interp.variables.set("GameOverSubstate", funkin.substates.GameOverSubstate);
+					interp.variables.set("changeCharacter", function(charType:Dynamic, newChar:String, ?x:Null<Float>, ?y:Null<Float>) {
+						if (PlayState.instance != null) {
+							var idx:Int = 1;
+							if (Std.isOfType(charType, Int)) {
+								idx = cast charType;
+							} else {
+								var str = Std.string(charType).toLowerCase().trim();
+								if (str == '0' || str == 'bf' || str == 'boyfriend' || str == 'player') idx = 0;
+								else if (str == '2' || str == 'gf' || str == 'girlfriend') idx = 2;
+								else idx = 1;
+							}
+							PlayState.instance.changeCharacter(idx, newChar, x, y);
+						}
+					});
+					interp.variables.set("triggerEvent", function(eventName:String, value1:String, value2:String) {
+						if (PlayState.instance != null) PlayState.instance.triggerEvent(eventName, value1, value2);
+					});
+					interp.variables.set("camPosTo", function(?x:Null<Float>, ?y:Null<Float>, ?timeSteps:Float = 0, ?ease:String = 'linear') {
+						if (PlayState.instance != null) PlayState.instance.camPosTo(x, y, timeSteps, ease);
+					});
 				}
 
 				// Expose stage properties and add() function
@@ -311,6 +332,7 @@ class Stage extends FlxTypedGroup<FlxBasic>
 				if (PlayState.instance.modManager != null)
 					interp.variables.set("modManager", PlayState.instance.modManager);
 				interp.variables.set("game", PlayState.instance);
+				interp.variables.set("camGame2", PlayState.camGame2);
 				interp.variables.set("camGame", PlayState.camGame);
 				interp.variables.set("camHUD", PlayState.camHUD);
 				interp.variables.set("camAlt", PlayState.camAlt);
@@ -334,7 +356,13 @@ class Stage extends FlxTypedGroup<FlxBasic>
 				aliases = ["create", "onCreate"];
 			}
 
+			var reservedFunctions:Array<String> = [
+				"triggerEvent", "restartSong", "changeCharacter", "camPosTo", 
+				"add", "remove", "insert", "addCameraZoom", "playCharacterAnim"
+			];
+
 			for (name in aliases) {
+				if (reservedFunctions.contains(name)) continue;
 				if (interp.variables.exists(name)) {
 					targetFunc = interp.variables.get(name);
 					if (targetFunc != null && Reflect.isFunction(targetFunc)) break;

@@ -41,7 +41,7 @@ class BeatModifier extends NoteModifier
 		}
 		if (evenBeat) amount *= -1;
 
-		var shift = 40 * amount * FlxMath.fastSin((visualDiff / 30) + Math.PI / 2);
+		var shift = 40 * amount * Math.sin((visualDiff / 30) + Math.PI / 2);
 		pos.x += getValue(player) * shift;
 		return pos;
 	}

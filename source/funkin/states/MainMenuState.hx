@@ -18,7 +18,7 @@ import backend.Discord;
 class MainMenuState extends MusicBeatState
 {
 	var menuItems:FlxTypedGroup<FlxSprite>;
-	var curSelected:Int = 0;
+	public static var curSelected:Int = 0;
 	var lastCurSelected:Int = 0;
 
 	var bg:FlxSprite;
@@ -79,12 +79,21 @@ class MainMenuState extends MusicBeatState
 			menuItems.add(menuItem);
 		}
 
+		if (curSelected < 0 || curSelected >= optionShit.length)
+			curSelected = 0;
+		lastCurSelected = curSelected;
+
 		var camLerp = 0.10;
 		FlxG.camera.follow(camFollow, null, camLerp);
 
 		updateSelection();
 
-
+		var curItem:FlxSprite = menuItems.members[curSelected];
+		if (curItem != null)
+		{
+			camFollow.setPosition(curItem.getGraphicMidpoint().x, curItem.getGraphicMidpoint().y);
+			FlxG.camera.snapToTarget();
+		}
 
 		var versionText:FlxText = new FlxText(5, FlxG.height - 18, 0, "K-Slice v" + Main.gameVersion, 12);
 		versionText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -129,7 +138,7 @@ class MainMenuState extends MusicBeatState
 				{
 					if (curSelected != spr.ID)
 					{
-						FlxTween.tween(spr, {alpha: 0, x: FlxG.width * 2}, 0.4, {
+						FlxTween.tween(spr, {alpha: 0}, 0.4, {
 							ease: FlxEase.quadOut,
 							onComplete: function(twn:FlxTween) { spr.kill(); }
 						});

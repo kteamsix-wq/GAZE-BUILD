@@ -50,7 +50,7 @@ class Main extends Sprite
 	public static var gameHeight:Int = 720;
 	public static var mainClassState:Class<FlxState> = PreloadState; // Uses the V-Slice PreloadState instead of Init directly
 	public static var framerate:Int = 120;
-	public static var gameVersion:String = '0.1-alpha';
+	public static var gameVersion:String = '0.1-alpha1';
 	public static var lastState:FlxState;
 
 	var zoom:Float = -1;
@@ -88,6 +88,8 @@ class Main extends Sprite
 
 		var gameCreate:FlxGame = new FlxGame(gameWidth, gameHeight, mainClassState, #if (flixel < "5.0.0") zoom, #end framerate, framerate, skipSplash);
 		addChild(gameCreate);
+
+		backend.FunkinMemory.init();
 
 		#if DISCORD_RPC
 		Discord.initializeRPC();
@@ -127,17 +129,31 @@ class Main extends Sprite
 		}
 
 		mainClassState = Type.getClass(target);
-		if (!FlxTransitionableState.skipNextTransOut)
+		var stateMaker:Void->FlxState = function():FlxState
+		{
+			if (target != null && target.members != null)
+			{
+				var inst:FlxState = target;
+				target = null;
+				return inst;
+			}
+			if (mainClassState == backend.ModState)
+				return new backend.ModState(stateName);
+			return Type.createInstance(mainClassState, []);
+		};
+
+		var activeState:FlxState = (curState != null) ? curState : FlxG.state;
+		if (!FlxTransitionableState.skipNextTransOut && activeState != null)
 		{
 			var transition = new FunkinTransition(0.35, false, function():Void
 			{
-				FlxG.switchState(target);
+				FlxG.switchState(stateMaker);
 			});
-			curState.openSubState(transition);
-			return; // trace('changed state [' + Type.getClassName(Type.getClass(curState)) + ']');
+			activeState.openSubState(transition);
+			return;
 		}
 		FlxTransitionableState.skipNextTransOut = false;
-		FlxG.switchState(target);
+		FlxG.switchState(stateMaker);
 	}
 
 	public static function updateFramerate(newFramerate:Int)

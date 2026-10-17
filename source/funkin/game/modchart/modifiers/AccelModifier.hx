@@ -44,7 +44,7 @@ class AccelModifier extends NoteModifier
 			}
 		}
 
-		yAdjust += wave * 20 * FlxMath.fastSin(visualDiff / 38);
+		yAdjust += wave * 20 * Math.sin(visualDiff / 38);
 
 		pos.y += yAdjust * mult;
 		return pos;

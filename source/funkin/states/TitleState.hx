@@ -131,12 +131,11 @@ class TitleState extends MusicBeatState
 		return swagGoodArray;
 	}
 
+	var transTimer:FlxTimer = null;
+
 	override function update(elapsed:Float)
 	{
-		if (FlxG.sound.music != null)
-			Conductor.songPosition = FlxG.sound.music.time;
-
-		var pressedEnter:Bool = FlxG.keys.justPressed.ENTER;
+		var pressedEnter:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
 
 		#if mobile
 		for (touch in FlxG.touches.list)
@@ -149,10 +148,26 @@ class TitleState extends MusicBeatState
 		var gamepad:FlxGamepad = FlxG.gamepads.lastActive;
 		if (gamepad != null)
 		{
-			if (gamepad.justPressed.START) pressedEnter = true;
+			if (gamepad.justPressed.START || gamepad.justPressed.A) pressedEnter = true;
 			#if switch
 			if (gamepad.justPressed.B) pressedEnter = true;
 			#end
+		}
+
+		if (controls.ACCEPT)
+			pressedEnter = true;
+
+		// Codename Engine style skip: if already transitioning, pressing enter/space again instantly skips to MainMenuState!
+		if (pressedEnter && transitioning && skippedIntro)
+		{
+			FlxG.camera.stopFX();
+			if (transTimer != null)
+			{
+				transTimer.cancel();
+				transTimer.destroy();
+				transTimer = null;
+			}
+			Main.switchState(this, new MainMenuState());
 		}
 
 		if (pressedEnter && !transitioning && skippedIntro)
@@ -163,13 +178,13 @@ class TitleState extends MusicBeatState
 
 			transitioning = true;
 
-			new FlxTimer().start(2, function(tmr:FlxTimer)
+			transTimer = new FlxTimer().start(2, function(tmr:FlxTimer)
 			{
 				Main.switchState(this, new MainMenuState());
 			});
 		}
 
-		if (pressedEnter && !skippedIntro && initialized)
+		if ((pressedEnter || FlxG.keys.justPressed.ESCAPE || controls.BACK) && !skippedIntro)
 			skipIntro();
 
 		super.update(elapsed);
@@ -255,8 +270,9 @@ class TitleState extends MusicBeatState
 		if (!skippedIntro)
 		{
 			remove(ngSpr);
-			FlxG.camera.flash(FlxColor.WHITE, 4);
+			FlxG.camera.flash(FlxColor.WHITE, 2);
 			remove(credGroup);
+			deleteCoolText();
 			skippedIntro = true;
 		}
 	}

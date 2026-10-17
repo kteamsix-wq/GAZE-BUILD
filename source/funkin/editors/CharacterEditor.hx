@@ -8,6 +8,7 @@ import flixel.ui.FlxButton;
 import flixel.ui.FlxBar;
 import flixel.util.FlxColor;
 import flixel.math.FlxMath;
+import flixel.math.FlxRect;
 import flixel.addons.display.FlxGridOverlay;
 import flixel.addons.ui.FlxUI;
 import flixel.addons.ui.FlxUITabMenu;
@@ -131,18 +132,24 @@ class CharacterEditor extends MusicBeatState
 
 		// Health Bar & Icon (Item 5)
 		healthBarBG = new FlxSprite(0, FlxG.height - 50);
-		healthBarBG.loadGraphic(Paths.image('UI/healthBar'));
+		healthBarBG.loadGraphic(Paths.image('UI/healthBar', null, false));
 		healthBarBG.screenCenter(X);
 		healthBarBG.scrollFactor.set();
 		healthBarBG.cameras = [camHUD];
-		add(healthBarBG);
 
-		healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8));
+		var detectedBounds:FlxRect = CoolUtil.detectHealthBarBounds(healthBarBG);
+		var innerX:Float = (detectedBounds != null) ? detectedBounds.x : 4;
+		var innerY:Float = (detectedBounds != null) ? detectedBounds.y : 4;
+		var innerW:Int = (detectedBounds != null) ? Std.int(detectedBounds.width) : Std.int(healthBarBG.width - 8);
+		var innerH:Int = (detectedBounds != null) ? Std.int(detectedBounds.height) : Std.int(healthBarBG.height - 8);
+
+		healthBar = new FlxBar(healthBarBG.x + innerX, healthBarBG.y + innerY, RIGHT_TO_LEFT, innerW, innerH);
 		healthBar.scrollFactor.set();
 		healthBar.cameras = [camHUD];
 		healthBar.setRange(0, 2);
 		healthBar.value = 1;
 		add(healthBar);
+		add(healthBarBG);
 
 		healthIcon = new HealthIcon("face", false);
 		healthIcon.cameras = [camHUD];

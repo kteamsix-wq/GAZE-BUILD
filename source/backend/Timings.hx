@@ -2,6 +2,8 @@ package backend;
 
 import funkin.states.PlayState;
 
+using StringTools;
+
 class Timings
 {
 	public static var accuracy:Float = 0;
@@ -12,8 +14,8 @@ class Timings
 	// order, max milliseconds, score from it, health/accuracy weight, fc label
 	public static var judgementsMap:Map<String, Array<Dynamic>> = [
 		"sick" => [0, 45, 350, 100, 'SFC'],
-		"good" => [1, 90, 150, 75, 'GFC'],
-		"bad"  => [2, 135, 0, 25, 'FC'],
+		"good" => [1, 90, 150, 100, 'GFC'],
+		"bad"  => [2, 135, 0, 50, 'FC'],
 		"shit" => [3, 157.5, -50, -150],
 		"miss" => [4, 180, -100, -175],
 	];
@@ -35,14 +37,14 @@ class Timings
 	public static var ratingFinal:String = "N/A";
 	public static var notesHit:Int = 0;
 	public static var segmentsHit:Int = 0;
-	public static var comboDisplay:String = '';
+	public static var comboDisplay:String = 'FC';
 
 	public static var gottenJudgements:Map<String, Int> = [];
 	public static var smallestRating:String = 'sick';
 
 	public static function callAccuracy():Void
 	{
-		accuracy = 0.001;
+		accuracy = 0;
 		trueAccuracy = 0;
 		judgementRates = [];
 
@@ -60,7 +62,7 @@ class Timings
 		notesHit = 0;
 		segmentsHit = 0;
 		ratingFinal = "N/A";
-		comboDisplay = '';
+		comboDisplay = 'FC';
 	}
 
 	public static function updateAccuracy(judgementWeight:Float, ?isSustain:Bool = false, ?segmentCount:Int = 1):Void
@@ -79,7 +81,7 @@ class Timings
 		}
 		
 		if (notesHit > 0)
-			trueAccuracy = (accuracy / notesHit);
+			trueAccuracy = Math.min(100, Math.max(0, accuracy / notesHit));
 		else
 			trueAccuracy = 0;
 
@@ -89,21 +91,57 @@ class Timings
 
 	public static function updateFCDisplay():Void
 	{
-		comboDisplay = '';
-		
-		var arr = judgementsMap.get(smallestRating);
-		if (arr != null && arr.length > 4 && arr[4] != null)
+		if (PlayState.misses == 0)
 		{
-			comboDisplay = Std.string(arr[4]);
+			if (notesHit == 0)
+			{
+				comboDisplay = 'FC';
+			}
+			else
+			{
+				var arr = judgementsMap.get(smallestRating);
+				if (arr != null && arr.length > 4 && arr[4] != null)
+					comboDisplay = Std.string(arr[4]);
+				else
+					comboDisplay = 'FC';
+			}
+		}
+		else if (PlayState.misses < 10)
+		{
+			comboDisplay = 'SDCB';
 		}
 		else
 		{
-			if (PlayState.misses < 10)
-				comboDisplay = 'SDCB';
+			comboDisplay = 'CLEAR';
 		}
 
 		if (PlayState.instance != null)
 			PlayState.instance.updateScoreText();
+	}
+
+	public static function getComboColor(combo:String):flixel.util.FlxColor
+	{
+		if (combo == null) return flixel.util.FlxColor.WHITE;
+		var upper = combo.toUpperCase().trim();
+		switch (upper)
+		{
+			case 'SFC':
+				return 0xFFFFD700; // Dourado
+			case 'GFC':
+				return 0xFF00FF66; // Verde
+			case 'FC':
+				return 0xFF35A7FF; // Azul
+			case 'SDCB':
+				return flixel.util.FlxColor.WHITE; // Branco (padrão)
+			case 'CLEAR':
+				return 0xFFFF3333; // Vermelho
+			case '---', 'N/A', '':
+				return 0xFF888888;
+			default:
+				if (upper.indexOf('CLEAR') != -1)
+					return 0xFFFF3333;
+				return flixel.util.FlxColor.WHITE;
+		}
 	}
 
 	public static inline function getAccuracy():Float

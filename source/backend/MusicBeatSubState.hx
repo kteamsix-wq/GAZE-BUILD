@@ -24,6 +24,9 @@ class MusicBeatSubState extends FlxSubState
 	private var lastBeat:Float = 0;
 	private var lastStep:Float = 0;
 
+	public var curDecStep:Float = 0;
+	public var curDecBeat:Float = 0;
+
 	private var curStep:Int = 0;
 	private var curBeat:Int = 0;
 	private var controls(get, never):Controls;
@@ -36,24 +39,24 @@ class MusicBeatSubState extends FlxSubState
 		var oldStep:Int = curStep;
 
 		updateCurStep();
-		curBeat = Math.floor(curStep / 4);
+		curDecBeat = curDecStep / 4.0;
+		curBeat = Math.floor(curDecBeat);
 
 		if (curStep > oldStep && curStep > 0)
 		{
-			if (curStep > oldStep + 1)
+			var stepsToCatchUp:Int = curStep - oldStep;
+			if (stepsToCatchUp > 12)
 			{
-				for (i in (oldStep + 1)...(curStep + 1))
-				{
-					curStep = i;
-					stepHit();
-				}
+				oldStep = curStep - 1;
 			}
-			else
+
+			for (i in (oldStep + 1)...(curStep + 1))
+			{
+				curStep = i;
+				curDecBeat = curStep / 4.0;
+				curBeat = Math.floor(curDecBeat);
 				stepHit();
-		}
-		else if (curStep < oldStep)
-		{
-			stepHit();
+			}
 		}
 
 		super.update(elapsed);
@@ -61,21 +64,8 @@ class MusicBeatSubState extends FlxSubState
 
 	private function updateCurStep():Void
 	{
-		var lastChange:BPMChangeEvent = {
-			stepTime: 0,
-			songTime: 0,
-			bpm: 0
-		}
-		
-		for (i in 0...Conductor.bpmChangeMap.length)
-		{
-			if (Conductor.songPosition >= Conductor.bpmChangeMap[i].songTime)
-				lastChange = Conductor.bpmChangeMap[i];
-			else
-				break;
-		}
-
-		var stepC = Conductor.stepCrochet; if (lastChange.bpm > 0) stepC = ((60 / lastChange.bpm) * 1000) / 4; curStep = lastChange.stepTime + Math.floor((Conductor.songPosition - lastChange.songTime) / stepC);
+		curDecStep = Conductor.calculateDecStep(Conductor.songPosition);
+		curStep = Math.floor(curDecStep);
 	}
 
 	public function stepHit():Void

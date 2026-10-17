@@ -1,4 +1,5 @@
 package backend;
+
 import backend.*;
 import funkin.objects.*;
 import funkin.objects.FunkinArrows;
@@ -9,12 +10,16 @@ import Paths;
 import Utils;
 import Init;
 
+import flixel.FlxG;
 import haxe.Json;
 import haxe.format.JsonParser;
 import Assets;
 import backend.Section.SwagSection;
+import backend.ChartConverter;
+#if sys
 import sys.FileSystem;
 import sys.io.File;
+#end
 
 using StringTools;
 
@@ -36,6 +41,7 @@ typedef SwagSong =
 	var noteSkin:String;
 	var assetModifier:String;
 	var validScore:Bool;
+	var ?format:String;
 }
 
 class Song
@@ -62,75 +68,48 @@ class Song
 	public static function loadFromJson(jsonInput:String, ?folder:String):SwagSong
 	{
 		var songFolder:String = (folder == null) ? jsonInput : folder;
-		
-		var chartPath:String = 'assets/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json';
+		var resolvedChartPath:String = ChartConverter.findChartPath(songFolder, jsonInput);
 
 		#if sys
-		var modChartPath:String = 'mods/' + Mods.currentModDirectory + '/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json';
-		if (Mods.currentModDirectory != null && FileSystem.exists(modChartPath))
-			chartPath = modChartPath;
-		else if (FileSystem.exists('mods/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json'))
-			chartPath = 'mods/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json';
-		#end
-
-		if (!FileSystem.exists(chartPath))
-			chartPath = 'assets/songs/${songFolder.toLowerCase()}/chart/chart.json';
-
-		#if sys
-		var modChartPath2:String = 'mods/' + Mods.currentModDirectory + '/songs/${songFolder.toLowerCase()}/chart/chart.json';
-		if (!FileSystem.exists(chartPath)) {
-			if (Mods.currentModDirectory != null && FileSystem.exists(modChartPath2))
-				chartPath = modChartPath2;
-			else if (FileSystem.exists('mods/songs/${songFolder.toLowerCase()}/chart/chart.json'))
-				chartPath = 'mods/songs/${songFolder.toLowerCase()}/chart/chart.json';
+		if (resolvedChartPath == null || !FileSystem.exists(resolvedChartPath))
+		{
+			var chartPath:String = 'assets/songs/${songFolder.toLowerCase()}/${jsonInput.toLowerCase()}.json';
+			if (!FileSystem.exists(chartPath))
+				chartPath = 'assets/songs/${songFolder.toLowerCase()}/chart/chart.json';
+			resolvedChartPath = chartPath;
 		}
-		#end
 
-		var rawJson = File.getContent(chartPath).trim();
+		if (!FileSystem.exists(resolvedChartPath))
+		{
+			FlxG.log.warn('Song.loadFromJson: Could not find chart for "$songFolder" / "$jsonInput"');
+			return ChartConverter.createFallbackSong(songFolder);
+		}
 
-		while (!rawJson.endsWith("}"))
-			rawJson = rawJson.substr(0, rawJson.length - 1);
+		var rawJson:String = File.getContent(resolvedChartPath).trim();
 
-		var parsedSong:SwagSong = parseJSONshit(rawJson);
+		// Determine target difficulty from input
+		var targetDiff:String = "normal";
+		var lowerInput:String = jsonInput.toLowerCase();
+		if (lowerInput.endsWith("-easy") || lowerInput == "easy")
+			targetDiff = "easy";
+		else if (lowerInput.endsWith("-hard") || lowerInput == "hard")
+			targetDiff = "hard";
+
+		var parsedSong:SwagSong = ChartConverter.convert(rawJson, songFolder, resolvedChartPath, targetDiff);
 		if (parsedSong.song == 'unknown')
 			parsedSong.song = songFolder;
 		return parsedSong;
+		#else
+		return ChartConverter.createFallbackSong(songFolder);
+		#end
 	}
 
 	public static function parseJSONshit(rawJson:String):SwagSong
 	{
-		var rawSong:Dynamic = Json.parse(rawJson).song;
-		var swagShit:SwagSong = cast rawSong;
-		if (swagShit.song == null)
-			swagShit.song = 'unknown';
-		var bpm:Dynamic = Reflect.field(rawSong, 'bpm');
-		if (bpm == null || bpm <= 0)
-			swagShit.bpm = findFirstBPM(swagShit.notes);
-		if (Reflect.field(rawSong, 'events') == null)
-			swagShit.events = [];
-		if (Reflect.field(rawSong, 'needsVoices') == null)
-			swagShit.needsVoices = true;
-		var speed:Dynamic = Reflect.field(rawSong, 'speed');
-		if (speed == null || speed <= 0)
-			swagShit.speed = 1;
-		swagShit.defaultSpeed = swagShit.speed;
-		if (swagShit.player1 == null)
-			swagShit.player1 = 'bf';
-		if (swagShit.player2 == null)
-			swagShit.player2 = 'dad';
-		if (swagShit.stage == null)
-			swagShit.stage = '';
-		if (swagShit.gfVersion == null)
-			swagShit.gfVersion = (swagShit.player3 != null) ? swagShit.player3 : 'gf';
-		if (swagShit.player3 == null)
-			swagShit.player3 = swagShit.gfVersion;
-		if (swagShit.stage == null || swagShit.stage == '')
-			swagShit.stage = 'stage';
-		swagShit.validScore = true;
-		return swagShit;
+		return ChartConverter.convert(rawJson);
 	}
 
-	private static function findFirstBPM(notes:Array<SwagSection>):Float
+	public static function findFirstBPM(notes:Array<SwagSection>):Float
 	{
 		if (notes != null)
 		{
@@ -142,7 +121,3 @@ class Song
 		return 100;
 	}
 }
-
-
-
-

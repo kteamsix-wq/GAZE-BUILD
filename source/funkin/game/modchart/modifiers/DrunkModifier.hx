@@ -24,7 +24,7 @@ class DrunkModifier extends NoteModifier
 		{
 			var speed = getSubmodValue("tipsySpeed", player);
 			var offset = getSubmodValue("tipsyOffset", player);
-			pos.y += tipsyPerc * (FlxMath.fastCos((songTime * ((speed * 1.2) + 1.2) + data * ((offset * 1.8) + 1.8))) * Note.swagWidth * .4);
+			pos.y += tipsyPerc * (Math.cos((songTime * ((speed * 1.2) + 1.2) + data * ((offset * 1.8) + 1.8))) * Note.swagWidth * .4);
 		}
 
 		if (drunkPerc != 0)
@@ -34,14 +34,14 @@ class DrunkModifier extends NoteModifier
 			var offset = getSubmodValue("drunkOffset", player);
 
 			var angle = songTime * (1 + speed) + data * ((offset * 0.2) + 0.2) + visualDiff * ((period * 10) + 10) / FlxG.height;
-			pos.x += drunkPerc * (FlxMath.fastCos(angle) * Note.swagWidth * 0.5);
+			pos.x += drunkPerc * (Math.cos(angle) * Note.swagWidth * 0.5);
 		}
 
 		if (tipZPerc != 0)
 		{
 			var speed = getSubmodValue("tipZSpeed", player);
 			var offset = getSubmodValue("tipZOffset", player);
-			pos.z += tipZPerc * (FlxMath.fastCos((songTime * ((speed * 1.2) + 1.2) + data * ((offset * 1.8) + 3.2))) * 0.15);
+			pos.z += tipZPerc * (Math.cos((songTime * ((speed * 1.2) + 1.2) + data * ((offset * 1.8) + 3.2))) * 0.15);
 		}
 
 		if (bumpyPerc != 0)
@@ -49,7 +49,7 @@ class DrunkModifier extends NoteModifier
 			var period = getSubmodValue("bumpyPeriod", player);
 			var offset = getSubmodValue("bumpyOffset", player);
 			var angle = (visualDiff + (100.0 * offset)) / ((period * 16.0) + 16.0);
-			pos.z += (bumpyPerc * 40 * FlxMath.fastSin(angle)) / 250;
+			pos.z += (bumpyPerc * 40 * Math.sin(angle)) / 250;
 		}
 
 		return pos;

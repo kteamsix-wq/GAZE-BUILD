@@ -45,6 +45,9 @@ typedef CharacterFile = {
 	@:optional var firstDeathSound:String;
 	@:optional var loopDeathMusic:String;
 	@:optional var confirmDeathSound:String;
+
+	@:optional var vocals_file:String;
+	@:optional var vocalsFile:String;
 }
 
 typedef CharacterData =
@@ -83,6 +86,9 @@ class Character extends FunkinSprites
 	public var characterData:CharacterData;
 	public var adjustPos:Bool = true;
 	public var skipDance:Bool = false;
+	public var vocalsFile:String = null;
+	public var specialAnim:Bool = false;
+	public var animLocked:Bool = false;
 
 	public function new(?isPlayer:Bool = false)
 	{
@@ -267,6 +273,13 @@ class Character extends FunkinSprites
 		if (json.confirmDeathSound != null)
 			confirmDeathSound = json.confirmDeathSound;
 			
+		if (json.vocals_file != null && json.vocals_file.length > 0)
+			vocalsFile = json.vocals_file;
+		else if (json.vocalsFile != null && json.vocalsFile.length > 0)
+			vocalsFile = json.vocalsFile;
+		else
+			vocalsFile = null;
+			
 		if (json.animations != null && json.animations.length > 0)
 		{
 			for (anim in json.animations)
@@ -362,7 +375,7 @@ class Character extends FunkinSprites
 			}
 
 			var dadVar:Float = singDuration;
-			if (holdTimer >= Conductor.stepCrochet * dadVar * 0.001 && !isPlayer)
+			if (holdTimer >= Conductor.stepCrochet * dadVar * 0.001 && !isPlayer && !animLocked)
 			{
 				dance();
 				holdTimer = 0;
@@ -373,16 +386,25 @@ class Character extends FunkinSprites
 		switch (curCharSimplified)
 		{
 			case 'gf':
-				if (getAnimName() == 'hairFall' && isAnimFinished())
-					playAnim('danceRight');
-				if (getAnimName().startsWith('sad') && isAnimFinished())
-					playAnim('danceLeft');
+				if (!animLocked)
+				{
+					if (getAnimName() == 'hairFall' && isAnimFinished())
+						playAnim('danceRight');
+					if (getAnimName().startsWith('sad') && isAnimFinished())
+						playAnim('danceLeft');
+				}
 		}
 
 		if (isAnimFinished() && getAnimName() == 'idle')
 		{
 			if (hasAnimation('idlePost'))
 				playAnim('idlePost', true, false, 0);
+		}
+
+		if (specialAnim && !animLocked && isAnimFinished())
+		{
+			specialAnim = false;
+			dance(true);
 		}
 
 		super.update(elapsed);
@@ -392,7 +414,13 @@ class Character extends FunkinSprites
 
 	public function dance(?forced:Bool = false)
 	{
-		if (!debugMode && !skipDance)
+		if (forced)
+		{
+			specialAnim = false;
+			animLocked = false;
+		}
+
+		if (!debugMode && !skipDance && (!specialAnim || forced) && (!animLocked || forced))
 		{
 			var curCharSimplified:String = simplifyCharacter();
 			switch (curCharSimplified)

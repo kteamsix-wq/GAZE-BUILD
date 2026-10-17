@@ -166,7 +166,7 @@ class GameOverSubstate extends MusicBeatSubState
 
 		if (!isEnding && FlxG.sound.music != null && FlxG.sound.music.playing)
 		{
-			Conductor.songPosition = FlxG.sound.music.time;
+			Conductor.update(elapsed, FlxG.sound.music);
 		}
 	}
 
@@ -174,6 +174,9 @@ class GameOverSubstate extends MusicBeatSubState
 	{
 		FlxG.sound.playMusic(Paths.music(loopSoundName), volume);
 	}
+
+	var isRestarting:Bool = false;
+	var deathTimer:FlxTimer = null;
 
 	function endBullshit():Void
 	{
@@ -189,18 +192,34 @@ class GameOverSubstate extends MusicBeatSubState
 				FlxG.sound.music.stop();
 
 			FlxG.sound.play(Paths.music(endSoundName));
-			new FlxTimer().start(0.7, function(tmr:FlxTimer)
+			deathTimer = new FlxTimer().start(0.7, function(tmr:FlxTimer)
 			{
-				FlxG.camera.fade(FlxColor.BLACK, 1.5, false, function()
+				deathTimer = null;
+				if (!isRestarting && FlxG.camera != null)
 				{
-					restartGame();
-				});
+					FlxG.camera.fade(FlxColor.BLACK, 1.5, false, function()
+					{
+						restartGame();
+					});
+				}
 			});
 		}
 	}
 
 	function restartGame():Void
 	{
+		if (isRestarting)
+			return;
+		isRestarting = true;
+
+		if (deathTimer != null)
+		{
+			deathTimer.cancel();
+			deathTimer = null;
+		}
+		if (FlxG.camera != null)
+			FlxG.camera.stopFX();
+
 		FlxTransitionableState.skipNextTransIn = true;
 		FlxTransitionableState.skipNextTransOut = true;
 		FlxG.resetState();
@@ -208,6 +227,11 @@ class GameOverSubstate extends MusicBeatSubState
 
 	override function destroy()
 	{
+		if (deathTimer != null)
+		{
+			deathTimer.cancel();
+			deathTimer = null;
+		}
 		instance = null;
 		super.destroy();
 	}

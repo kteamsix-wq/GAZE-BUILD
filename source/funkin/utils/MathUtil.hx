@@ -81,6 +81,6 @@ class MathUtil
 
 	public static inline function fastTan(rad:Float):Float
 	{
-		return (FlxMath.fastSin(rad) / FlxMath.fastCos(rad));
+		return Math.tan(rad);
 	}
 }

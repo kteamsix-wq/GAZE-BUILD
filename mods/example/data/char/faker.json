@@ -1,0 +1,89 @@
+{
+	"healthbar_colors": [
+		255,
+		255,
+		255
+	],
+	"position": [
+		0,
+		0
+	],
+	"scale": 1,
+	"no_antialiasing": false,
+	"camera_position": [
+		0,
+		0
+	],
+	"image": "characters/fakerx",
+	"sing_duration": 6.1,
+	"healthicon": "tankman",
+	"flip_x": false,
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				-3,
+				1
+			],
+			"fps": 24,
+			"anim": "singLEFT",
+			"indices": [],
+			"name": "SONIC X LEFT"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				10
+			],
+			"fps": 24,
+			"anim": "singDOWN",
+			"indices": [],
+			"name": "SONIC X DOWN"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				2,
+				-5
+			],
+			"fps": 24,
+			"anim": "singUP",
+			"indices": [],
+			"name": "SONIC X UP"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				10,
+				-3
+			],
+			"fps": 24,
+			"anim": "singRIGHT",
+			"indices": [],
+			"name": "SONIC X RIGHT"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				0
+			],
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "SONIC X IDLE"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				0,
+				0
+			],
+			"fps": 24,
+			"anim": "well",
+			"indices": [],
+			"name": "SONIC X WELCOME"
+		}
+	]
+}

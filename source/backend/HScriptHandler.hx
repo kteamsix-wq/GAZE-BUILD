@@ -17,6 +17,28 @@ import funkin.objects.Character;
 
 class CustomInterp extends hscript.Interp {
 	override public function set(o:Dynamic, f:String, v:Dynamic):Dynamic {
+		if (o == PlayState || o == PlayState.instance || Std.isOfType(o, PlayState)) {
+			switch (f) {
+				case "health": PlayState.health = v; return v;
+				case "combo": PlayState.combo = v; return v;
+				case "songScore" | "score": PlayState.songScore = v; return v;
+				case "misses": PlayState.misses = v; return v;
+				case "deaths": PlayState.deaths = v; return v;
+				case "curStage": PlayState.curStage = v; return v;
+				case "defaultCamZoom": PlayState.defaultCamZoom = v; return v;
+				case "cameraSpeed": PlayState.cameraSpeed = v; return v;
+				case "camZooming": PlayState.camZooming = v; return v;
+				case "camZoomingMult": PlayState.camZoomingMult = v; return v;
+				case "camZoomingFrequency": PlayState.camZoomingFrequency = v; return v;
+				case "boyfriend": PlayState.boyfriend = v; return v;
+				case "dad" | "dadOpponent": PlayState.dadOpponent = v; return v;
+				case "gf": PlayState.gf = v; return v;
+				case "camGame2": PlayState.camGame2 = v; return v;
+				case "camGame": PlayState.camGame = v; return v;
+				case "camHUD": PlayState.camHUD = v; return v;
+				case "camAlt": PlayState.camAlt = v; return v;
+			}
+		}
 		if (Std.isOfType(o, backend.FunkinShader.FunkinShaderImpl) || Std.isOfType(o, flixel.addons.display.FlxRuntimeShader)) {
 			var shader:flixel.addons.display.FlxRuntimeShader = cast o;
 			if (shader.data != null) {
@@ -29,10 +51,51 @@ class CustomInterp extends hscript.Interp {
 				}
 			}
 		}
-		return super.set(o, f, v);
+		try {
+			return super.set(o, f, v);
+		} catch (e:Dynamic) {
+			try {
+				Reflect.setField(o, f, v);
+				return v;
+			} catch(e2:Dynamic) {
+				throw e;
+			}
+		}
 	}
 
 	override public function get(o:Dynamic, f:String):Dynamic {
+		if (o == PlayState || o == PlayState.instance || Std.isOfType(o, PlayState)) {
+			switch (f) {
+				case "health": return PlayState.health;
+				case "combo": return PlayState.combo;
+				case "songScore" | "score": return PlayState.songScore;
+				case "misses": return PlayState.misses;
+				case "deaths": return PlayState.deaths;
+				case "curStage": return PlayState.curStage;
+				case "defaultCamZoom": return PlayState.defaultCamZoom;
+				case "cameraSpeed": return PlayState.cameraSpeed;
+				case "camZooming": return PlayState.camZooming;
+				case "camZoomingMult": return PlayState.camZoomingMult;
+				case "camZoomingFrequency": return PlayState.camZoomingFrequency;
+				case "boyfriend": return PlayState.boyfriend;
+				case "dad" | "dadOpponent": return PlayState.dadOpponent;
+				case "gf": return PlayState.gf;
+				case "camGame2": return PlayState.camGame2;
+				case "camGame": return PlayState.camGame;
+				case "camHUD": return PlayState.camHUD;
+				case "camAlt": return PlayState.camAlt;
+				case "songMusic": return PlayState.songMusic;
+				case "vocals": return PlayState.vocals;
+				case "opponentVocals": return PlayState.opponentVocals;
+				case "SONG": return PlayState.SONG;
+				case "dadStrums": return PlayState.dadStrums;
+				case "boyfriendStrums": return PlayState.boyfriendStrums;
+				case "strumLines": return PlayState.strumLines;
+				case "triggerEvent": return PlayState.instance != null ? PlayState.instance.triggerEvent : null;
+				case "playCharacterAnim": return PlayState.instance != null ? PlayState.instance.playCharacterAnim : null;
+				case "addCameraZoom": return PlayState.instance != null ? PlayState.instance.addCameraZoom : null;
+			}
+		}
 		if (o == flixel.FlxG.sound && f == "playMusic") {
 			return function(asset:Dynamic, vol:Float=1.0, loop:Bool=true) { flixel.FlxG.sound.playMusic(asset, vol, loop); };
 		}
@@ -51,6 +114,78 @@ class CustomInterp extends hscript.Interp {
 			}
 		}
 		return super.get(o, f);
+	}
+
+	override function assign(e1:hscript.Expr, e2:hscript.Expr):Dynamic {
+		switch (hscript.Tools.expr(e1)) {
+			case EIdent(id):
+				switch (id) {
+					case "health":
+						var v = expr(e2);
+						PlayState.health = v;
+						return v;
+					case "combo":
+						var v = expr(e2);
+						PlayState.combo = v;
+						return v;
+					case "songScore" | "score":
+						var v = expr(e2);
+						PlayState.songScore = v;
+						return v;
+					case "misses":
+						var v = expr(e2);
+						PlayState.misses = v;
+						return v;
+					case "deaths":
+						var v = expr(e2);
+						PlayState.deaths = v;
+						return v;
+				}
+			default:
+		}
+		return super.assign(e1, e2);
+	}
+
+	override function evalAssignOp(op:String, fop:Dynamic->Dynamic->Dynamic, e1:hscript.Expr, e2:hscript.Expr):Dynamic {
+		switch (hscript.Tools.expr(e1)) {
+			case EIdent(id):
+				switch (id) {
+					case "health":
+						var v = fop(PlayState.health, expr(e2));
+						PlayState.health = v;
+						return v;
+					case "combo":
+						var v = fop(PlayState.combo, expr(e2));
+						PlayState.combo = v;
+						return v;
+					case "songScore" | "score":
+						var v = fop(PlayState.songScore, expr(e2));
+						PlayState.songScore = v;
+						return v;
+					case "misses":
+						var v = fop(PlayState.misses, expr(e2));
+						PlayState.misses = v;
+						return v;
+					case "deaths":
+						var v = fop(PlayState.deaths, expr(e2));
+						PlayState.deaths = v;
+						return v;
+				}
+			default:
+		}
+		return super.evalAssignOp(op, fop, e1, e2);
+	}
+
+	override function resolve(id:String):Dynamic {
+		if (locals.exists(id)) return locals.get(id).r;
+		switch (id) {
+			case "health": return PlayState.health;
+			case "combo": return PlayState.combo;
+			case "songScore" | "score": return PlayState.songScore;
+			case "misses": return PlayState.misses;
+			case "deaths": return PlayState.deaths;
+		}
+		return super.resolve(id);
 	}
 }
 
@@ -149,6 +284,10 @@ class HScriptHandler {
 		setVar("Conductor", backend.Conductor);
 		setVar("Mods", backend.Mods);
 		setVar("CoolUtil", backend.CoolUtil);
+		setVar("FunkinArrows", funkin.objects.FunkinArrows);
+		setVar("Note", funkin.objects.FunkinArrows.Note);
+		setVar("UIStaticArrow", funkin.objects.FunkinArrows.UIStaticArrow);
+		setVar("NoteSplash", funkin.objects.FunkinArrows.NoteSplash);
 
 		if (PlayState.instance != null) {
 			setVar("game", PlayState.instance);
@@ -165,6 +304,7 @@ class HScriptHandler {
 			setVar("gf", PlayState.gf);
 			
 			// Camera shortcuts
+			setVar("camGame2", PlayState.camGame2);
 			setVar("camGame", PlayState.camGame);
 			setVar("camHUD", PlayState.camHUD);
 			setVar("camAlt", PlayState.camAlt);
@@ -224,6 +364,17 @@ class HScriptHandler {
 		setVar("Vector3", funkin.backend.math.Vector3);
 		setVar("MathUtil", funkin.utils.MathUtil);
 
+		// Countdown
+		setVar("Countdown", funkin.play.Countdown);
+		setVar("CountdownStep", {
+			BEFORE: funkin.play.Countdown.CountdownStep.BEFORE,
+			THREE: funkin.play.Countdown.CountdownStep.THREE,
+			TWO: funkin.play.Countdown.CountdownStep.TWO,
+			ONE: funkin.play.Countdown.CountdownStep.ONE,
+			GO: funkin.play.Countdown.CountdownStep.GO,
+			AFTER: funkin.play.Countdown.CountdownStep.AFTER
+		});
+
 		try {
 			var scriptText = File.getContent(scriptPath);
 			var strippedText = "";
@@ -266,7 +417,13 @@ class HScriptHandler {
 			aliases = ["create", "onCreate"];
 		}
 
+		var reservedFunctions:Array<String> = [
+			"triggerEvent", "restartSong", "changeCharacter", "camPosTo", 
+			"add", "remove", "insert", "addCameraZoom", "playCharacterAnim"
+		];
+
 		for (name in aliases) {
+			if (reservedFunctions.contains(name)) continue;
 			if (interp.variables.exists(name)) {
 				targetFunc = interp.variables.get(name);
 				if (targetFunc != null && Reflect.isFunction(targetFunc)) break;

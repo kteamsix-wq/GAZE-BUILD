@@ -4,11 +4,20 @@ import backend.*;
 import funkin.objects.*;
 import funkin.objects.FunkinArrows;
 import backend.Song.SwagSong;
+import backend.ChartConverter;
 import funkin.states.PlayState;
 import Init;
 
 class ChartLoader
 {
+	/**
+	 * Automatically converts any chart from Codename, V-Slice, NightmareVision, Psych, Kade, Denpa, or Yoshi to GAZE BUILD standard.
+	 */
+	public static function convert(rawInput:Dynamic, ?songFolder:String = "", ?chartPath:String = "", ?targetDifficulty:String = "normal"):SwagSong
+	{
+		return ChartConverter.convert(rawInput, songFolder, chartPath, targetDifficulty);
+	}
+
 	public static function generateChartType(songData:SwagSong, ?typeOfChart:String = "FNF"):Array<Note>
 	{
 		var unspawnNotes:Array<Note> = [];

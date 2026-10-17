@@ -1,567 +1,600 @@
 package funkin.states;
+
 import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
 import Paths;
 import Utils;
-import Assets;
 import Init;
-
-import flixel.FlxCamera;
-import flixel.FlxBasic;
-import flixel.FlxG;
-import flixel.FlxSprite;
-import flixel.effects.FlxFlicker;
-import flixel.group.FlxGroup.FlxTypedGroup;
-import flixel.text.FlxText;
-import flixel.util.FlxColor;
-import flixel.util.FlxTimer;
-import funkin.objects.Checkmark;
-import funkin.objects.Selector;
-import backend.MusicBeatState;
-import backend.Discord;
-import funkin.objects.FunkinSprites;
-import funkin.objects.Alphabet;
 import funkin.substates.OptionsSubstate;
 
+import flixel.FlxG;
+import flixel.FlxSprite;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.math.FlxMath;
+import flixel.text.FlxText;
+import flixel.util.FlxColor;
+
+using StringTools;
+
+enum OptionType
+{
+	CHECKMARK;
+	SELECTOR(options:Array<String>);
+	NUMBER(min:Float, max:Float, step:Float, suffix:String);
+	CATEGORY;
+	ACTION;
+}
+
+typedef OptionEntry =
+{
+	var id:String;
+	var name:String;
+	var description:String;
+	var type:OptionType;
+	@:optional var action:Void->Void;
+}
+
 /**
-	Options menu rewrite because I'm unhappy with how it was done previously
-**/
+ * Modernized OptionsMenuState built completely from scratch.
+ * Features a strictly straight-column layout, smooth vertical scrolling,
+ * hold-to-scroll support, organized categories, and instant live settings updates.
+ */
 class OptionsMenuState extends MusicBeatState
 {
-	private var categoryMap:Map<String, Dynamic>;
-	private var activeSubgroup:FlxTypedGroup<Alphabet>;
-	private var attachments:FlxTypedGroup<FlxBasic>;
-
-	var curSelection = 0;
-	var curSelectedScript:Void->Void;
-	var curCategory:String;
-
-	var lockedMovement:Bool = false;
 	public static var instance:OptionsMenuState;
+
+	var bg:FlxSprite;
+	var headerBar:FlxSprite;
+	var titleText:FlxText;
+	var breadcrumbText:FlxText;
+
+	var bottomBar:FlxSprite;
+	var descText:FlxText;
+	var helpText:FlxText;
+
+	public static var categorySelections:Map<String, Int> = new Map<String, Int>();
+	public static var lastCategory:String = "main";
+
+	var currentCategory:String = "main";
+	var categoryHistory:Array<String> = [];
+
+	var categories:Map<String, Array<OptionEntry>> = [];
+	var currentOptions:Array<OptionEntry> = [];
+	var curSelection:Int = 0;
+
+	var grpOptionTexts:FlxTypedGroup<FlxText>;
+	var grpValueTexts:FlxTypedGroup<FlxText>;
+	var selectorCursor:FlxText;
+
+	// Hold-to-scroll timers
+	var holdUpTime:Float = 0;
+	var holdDownTime:Float = 0;
+	var holdLeftTime:Float = 0;
+	var holdRightTime:Float = 0;
+
+	// Framerate cap presets
+	static final FPS_PRESETS:Array<Int> = [30, 60, 75, 90, 120, 144, 165, 180, 240, 300, 360];
 
 	override public function create():Void
 	{
 		super.create();
 
-		#if DISCORD_RPC
+		instance = this;
+
+		#if desktop
 		Discord.changePresence('OPTIONS MENU', 'Main Menu');
 		#end
 
-		instance = this;
-
-		categoryMap = [
-			'main' => [
-				[
-					['note', callNewGroup],
-					['graphics', callNewGroup],
-					['gameplay', callNewGroup],
-					['controls', openControlmenu],
-					['exit', exitMenu]
-				]
-			],
-			'note' => [
-				[
-					['Note Config', null],
-					['', null],
-					['Controller Mode', getFromOption],
-					['Downscroll', getFromOption],
-					['Centered Notefield', getFromOption],
-					['Ghost Tapping', getFromOption],
-					['', null],
-					['Disable Note Splashes', getFromOption],
-					['Alpha Arrows', getFromOption],
-					['Alpha Holds', getFromOption]
-				]
-			],
-			'graphics' => [
-				[
-					['Disable Antialiasing', getFromOption],
-					['FPS Counter', getFromOption],
-					['Memory Counter', getFromOption],
-					#if !neko ['Debug Info', getFromOption], #end
-					#if !neko ["Framerate Cap", getFromOption] #end
-				]
-			],
-			'gameplay' => [
-				[
-					['Text Settings', null],
-					['', null],
-					['Display Accuracy', getFromOption],
-					['Skip Text', getFromOption],
-					['', null],
-					['Meta Settings', null],
-					['', null],
-					['Auto Pause', getFromOption]
-				]
-			]
-		];
-
-		for (category in categoryMap.keys())
-		{
-			categoryMap.get(category)[1] = returnSubgroup(category);
-			categoryMap.get(category)[2] = returnExtrasMap(categoryMap.get(category)[1]);
-		}
-		
-		var bg = new FlxSprite();
-		bg.makeGraphic(1280, 720, 0xff0400F3);
+		// Background with subtle navy tint
+		bg = new FlxSprite().loadGraphic(Paths.image('menus/menuDesat'));
+		bg.color = 0xFF0D1B36;
+		bg.setGraphicSize(Std.int(FlxG.width * 1.1), Std.int(FlxG.height * 1.1));
+		bg.updateHitbox();
 		bg.screenCenter();
-		bg.alpha = 0.65;
+		bg.scrollFactor.set();
 		add(bg);
 
-		infoText = new FlxText(5, FlxG.height - 24, 0, "", 32);
-		infoText.setFormat("VCR OSD Mono", 20, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		infoText.textField.background = true;
-		infoText.textField.backgroundColor = FlxColor.BLACK;
-		add(infoText);
+		var darkOverlay:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0x99000000);
+		darkOverlay.scrollFactor.set();
+		add(darkOverlay);
 
-		loadSubgroup('main');
+		// Groups for straight column elements
+		grpOptionTexts = new FlxTypedGroup<FlxText>();
+		grpValueTexts = new FlxTypedGroup<FlxText>();
+
+		add(grpOptionTexts);
+		add(grpValueTexts);
+
+		// Selector cursor
+		selectorCursor = new FlxText(80, 0, 0, ">", 26);
+		selectorCursor.setFormat(Paths.font("vcr.ttf"), 26, 0xFFFFD700, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectorCursor.borderSize = 2;
+		add(selectorCursor);
+
+		// Top Header
+		headerBar = new FlxSprite(0, 0).makeGraphic(FlxG.width, 70, 0xEE080D1A);
+		headerBar.scrollFactor.set();
+		add(headerBar);
+
+		titleText = new FlxText(40, 12, 0, "OPTIONS", 28);
+		titleText.setFormat(Paths.font("vcr.ttf"), 28, 0xFF35A7FF, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		titleText.borderSize = 2;
+		titleText.scrollFactor.set();
+		add(titleText);
+
+		breadcrumbText = new FlxText(200, 18, 0, "", 20);
+		breadcrumbText.setFormat(Paths.font("vcr.ttf"), 20, 0xFFAAAAAA, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		breadcrumbText.borderSize = 2;
+		breadcrumbText.scrollFactor.set();
+		add(breadcrumbText);
+
+		// Bottom Description & Help Bar
+		bottomBar = new FlxSprite(0, FlxG.height - 65).makeGraphic(FlxG.width, 65, 0xEE080D1A);
+		bottomBar.scrollFactor.set();
+		add(bottomBar);
+
+		descText = new FlxText(40, FlxG.height - 58, FlxG.width - 80, "", 18);
+		descText.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		descText.borderSize = 1.5;
+		descText.scrollFactor.set();
+		add(descText);
+
+		helpText = new FlxText(40, FlxG.height - 30, FlxG.width - 80, "[UP/DOWN] Navigate   •   [ENTER/LEFT/RIGHT] Change   •   [ESC] Back", 15);
+		helpText.setFormat(Paths.font("vcr.ttf"), 15, 0xFF888888, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		helpText.borderSize = 1.5;
+		helpText.scrollFactor.set();
+		add(helpText);
+
+		initOptionsData();
+		loadCategory("main");
 	}
 
-	private var currentAttachmentMap:Map<Alphabet, Dynamic>;
-
-	function loadSubgroup(subgroupName:String)
+	function initOptionsData():Void
 	{
-		// unlock the movement
-		lockedMovement = false;
+		categories = new Map<String, Array<OptionEntry>>();
 
-		// lol we wanna kill infotext so it goes over checkmarks later
-		if (infoText != null)
-			remove(infoText);
+		// Main categories list
+		categories.set("main", [
+			{id: "gameplay", name: "GAMEPLAY", description: "Configure gameplay mechanics, downscroll, offsets, and input preferences.", type: CATEGORY},
+			{id: "appearance", name: "APPEARANCE", description: "Customize visuals, hold trail clipping, and receptor arrow opacity.", type: CATEGORY},
+			{id: "graphics", name: "GRAPHICS & DISPLAY", description: "Adjust performance, framerate limits, antialiasing, and GPU memory caching.", type: CATEGORY},
+			{id: "preferences", name: "PREFERENCES", description: "System options such as automatic pausing when unfocused.", type: CATEGORY},
+			{id: "controls", name: "CONTROLS", description: "Customize and rebind your keyboard keys and shortcuts.", type: ACTION, action: openControlsMenu},
+			{id: "exit", name: "EXIT TO MAIN MENU", description: "Save all settings and return to the main menu.", type: ACTION, action: exitMenu}
+		]);
 
-		// kill previous subgroup attachments
-		if (attachments != null)
-			remove(attachments);
+		// Gameplay settings
+		categories.set("gameplay", [
+			{id: "Downscroll", name: "DOWNSCROLL", description: "Flips the strumline vertically so notes scroll downwards instead of upwards.", type: CHECKMARK},
+			{id: "Centered Notefield", name: "CENTERED NOTEFIELD", description: "Centers your notes in the middle of the screen and hides opponent arrows.", type: CHECKMARK},
+			{id: "Ghost Tapping", name: "GHOST TAPPING", description: "Allows pressing keys when no notes are on screen without receiving miss penalties.", type: CHECKMARK},
+			{id: "Controller Mode", name: "CONTROLLER MODE", description: "Enables gamepad controller button inputs for playing charts.", type: CHECKMARK},
+			{id: "Disable Note Splashes", name: "DISABLE NOTE SPLASHES", description: "Hides particle splash effects when hitting Sick! ratings.", type: CHECKMARK},
+			{id: "No Camera Note Movement", name: "STATIC CAMERA", description: "Disables camera bumping towards note hit directions during gameplay.", type: CHECKMARK},
+			{id: "Offset", name: "AUDIO OFFSET", description: "Song audio offset in milliseconds. Adjusts timing to sync with your audio display.", type: NUMBER(-500, 500, 1, "ms")}
+		]);
 
-		// kill previous subgroup if it exists
-		if (activeSubgroup != null)
-			remove(activeSubgroup);
+		// Appearance settings
+		categories.set("appearance", [
+			{id: "Alpha Arrows", name: "RECEPTOR ARROWS ALPHA", description: "Ensures the receptor arrows at the top/bottom are at 100% full opacity.", type: CHECKMARK},
+			{id: "Alpha Holds", name: "HOLD TRAILS ALPHA", description: "Ensures sustain trails are rendered at 100% full opacity.", type: CHECKMARK},
+			{id: "Clip Style", name: "HOLD CLIP STYLE", description: "Chooses hold note clipping style: StepMania (under receptors) or FNF (over receptors).", type: SELECTOR(["StepMania", "FNF"])}
+		]);
 
-		// load subgroup lmfao
-		activeSubgroup = categoryMap.get(subgroupName)[1];
-		add(activeSubgroup);
+		// Graphics & Display settings
+		categories.set("graphics", [
+			{id: "GPU Caching", name: "GPU TEXTURE CACHING", description: "Uploads textures directly to GPU VRAM and discards CPU RAM copies, greatly reducing memory usage.", type: CHECKMARK},
+			{id: "Disable Antialiasing", name: "DISABLE ANTIALIASING", description: "Disables texture smoothing for a crisp retro pixel aesthetic and higher FPS.", type: CHECKMARK},
+			{id: "FPS Counter", name: "FPS COUNTER", description: "Displays real-time frame rate in the top-left corner.", type: CHECKMARK},
+			{id: "Memory Counter", name: "MEMORY COUNTER", description: "Displays approximately how much RAM is being used by the game.", type: CHECKMARK},
+			{id: "Debug Info", name: "DEBUG OVERLAY", description: "Shows active state name, conductor position, and engine debug information.", type: CHECKMARK},
+			{id: "Framerate Cap", name: "FRAMERATE CAP", description: "Defines the maximum framerate cap for the game renderer.", type: SELECTOR(FPS_PRESETS.map(Std.string))}
+		]);
 
-		// set the category
-		curCategory = subgroupName;
-
-		// add all group attachments afterwards
-		currentAttachmentMap = categoryMap.get(subgroupName)[2];
-		attachments = new FlxTypedGroup<FlxBasic>();
-		for (setting in activeSubgroup)
-			if (currentAttachmentMap.get(setting) != null)
-				attachments.add(currentAttachmentMap.get(setting));
-		add(attachments);
-
-		// re-add
-		add(infoText);
-		regenInfoText();
-
-		// reset the selection
-		curSelection = 0;
-		selectOption(curSelection);
+		// System / Preferences
+		categories.set("preferences", [
+			{id: "Auto Pause", name: "AUTO PAUSE", description: "Automatically pauses the game when the window loses focus.", type: CHECKMARK}
+		]);
 	}
 
-	function selectOption(newSelection:Int, playSound:Bool = true)
+	function loadCategory(catId:String, fromBack:Bool = false):Void
 	{
-		if ((newSelection != curSelection) && (playSound))
-			FlxG.sound.play(Paths.sound('system/scroll'));
+		if (!categories.exists(catId)) return;
 
-		// direction increment finder
-		var directionIncrement = ((newSelection < curSelection) ? -1 : 1);
+		if (!fromBack && currentCategory != catId)
+			categoryHistory.push(currentCategory);
 
-		// updates to that new selection
-		curSelection = newSelection;
+		currentCategory = catId;
+		lastCategory = catId;
+		currentOptions = categories.get(catId);
 
-		// wrap the current selection
-		if (curSelection < 0)
-			curSelection = activeSubgroup.length - 1;
-		else if (curSelection >= activeSubgroup.length)
-			curSelection = 0;
-
-		// set the correct group stuffs lol
-		for (i in 0...activeSubgroup.length)
+		// Restore remembered selection for this category, or default to 0
+		if (categorySelections.exists(catId))
 		{
-			activeSubgroup.members[i].alpha = 0.6;
-			if (currentAttachmentMap != null)
-				setAttachmentAlpha(currentAttachmentMap.get(activeSubgroup.members[i]), 0.6);
-			activeSubgroup.members[i].targetY = (i - curSelection) / 2;
-			activeSubgroup.members[i].xTo = 200 + ((i - curSelection) * 25);
-
-			// check for null members and hardcode the dividers
-			if (categoryMap.get(curCategory)[0][i][1] == null)
-			{
-				activeSubgroup.members[i].alpha = 1;
-				activeSubgroup.members[i].xTo += Std.int((FlxG.width / 2) - ((activeSubgroup.members[i].text.length / 2) * 40)) - 200;
-			}
+			curSelection = categorySelections.get(catId);
+			if (curSelection < 0 || curSelection >= currentOptions.length)
+				curSelection = 0;
+		}
+		else
+		{
+			curSelection = 0;
 		}
 
-		activeSubgroup.members[curSelection].alpha = 1;
-		if (currentAttachmentMap != null)
-			setAttachmentAlpha(currentAttachmentMap.get(activeSubgroup.members[curSelection]), 1);
+		// Update Breadcrumbs
+		if (catId == "main")
+		{
+			titleText.text = "OPTIONS";
+			breadcrumbText.text = "";
+		}
+		else
+		{
+			titleText.text = "OPTIONS";
+			var catTitle = catId.toUpperCase();
+			for (item in categories.get("main"))
+			{
+				if (item.id == catId)
+				{
+					catTitle = item.name;
+					break;
+				}
+			}
+			breadcrumbText.text = " >  " + catTitle;
+		}
 
-		// what's the script of the current selection?
-		for (i in 0...categoryMap.get(curCategory)[0].length)
-			if (categoryMap.get(curCategory)[0][i][0] == activeSubgroup.members[curSelection].text)
-				curSelectedScript = categoryMap.get(curCategory)[0][i][1];
-		// wow thats a dumb check lmao
-
-		// skip line if the selected script is null (indicates line break)
-			
-
-		if (curSelectedScript == null)
-			selectOption(curSelection + directionIncrement, false);
+		rebuildOptionDisplays();
+		updateSelection(0, false);
 	}
 
-	function setAttachmentAlpha(attachment:FlxSprite, newAlpha:Float)
+	function rebuildOptionDisplays():Void
 	{
-		// oddly enough, you can't set alphas of objects that arent directly and inherently defined as a value.
-		// ya flixel is weird lmao
-		if (attachment != null)
-			attachment.alpha = newAlpha;
-		// therefore, I made a script to circumvent this by defining the attachment with the `attachment` variable!
-		// pretty neat, huh?
+		// Clean up existing elements
+		while (grpOptionTexts.members.length > 0)
+			grpOptionTexts.remove(grpOptionTexts.members[0], true).destroy();
+
+		while (grpValueTexts.members.length > 0)
+			grpValueTexts.remove(grpValueTexts.members[0], true).destroy();
+
+		for (i in 0...currentOptions.length)
+		{
+			var opt = currentOptions[i];
+			var initialY = (FlxG.height * 0.46) + ((i - curSelection) * 58.0);
+
+			// Option Name Text (Strictly straight column at fixed X = 120)
+			var optTxt:FlxText = new FlxText(120, initialY, 680, opt.name, 24);
+			optTxt.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			optTxt.borderSize = 2;
+			grpOptionTexts.add(optTxt);
+
+			// Value Text (Straight column at fixed X = 860)
+			var valTxt:FlxText = new FlxText(860, initialY, 360, "", 24);
+			valTxt.setFormat(Paths.font("vcr.ttf"), 24, 0xFF35A7FF, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			valTxt.borderSize = 2;
+			grpValueTexts.add(valTxt);
+		}
+
+		refreshOptionValues();
 	}
 
-	var infoText:FlxText;
-	var finalText:String;
-	var textValue:String = '';
-	var infoTimer:FlxTimer;
+	function refreshOptionValues():Void
+	{
+		for (i in 0...currentOptions.length)
+		{
+			var opt = currentOptions[i];
+			var valTxt = grpValueTexts.members[i];
 
-	override public function update(elapsed:Float)
+			switch (opt.type)
+			{
+				case CHECKMARK:
+					var isChecked:Bool = Init.trueSettings.get(opt.id) == true;
+					valTxt.text = isChecked ? "[ X ]" : "[   ]";
+					valTxt.color = isChecked ? 0xFF00FF66 : 0xFF777777;
+
+				case SELECTOR(options):
+					var currentVal = Std.string(Init.trueSettings.get(opt.id));
+					valTxt.text = "<  " + currentVal + "  >";
+					valTxt.color = 0xFFFFD700;
+
+				case NUMBER(min, max, step, suffix):
+					var currentNum:Float = Std.parseFloat(Std.string(Init.trueSettings.get(opt.id)));
+					if (Math.isNaN(currentNum)) currentNum = 0.0;
+					valTxt.text = "<  " + (Math.round(currentNum * 10) / 10) + " " + suffix + "  >";
+					valTxt.color = 0xFFFFD700;
+
+				case CATEGORY:
+					valTxt.text = ">";
+					valTxt.color = 0xFF35A7FF;
+
+				case ACTION:
+					valTxt.text = "[ ENTER ]";
+					valTxt.color = 0xFF888888;
+			}
+		}
+	}
+
+	override public function update(elapsed:Float):Void
 	{
 		super.update(elapsed);
 
-		// just uses my outdated code for the main menu state where I wanted to implement
-		// hold scrolling but I couldnt because I'm dumb and lazy
-		if (!lockedMovement)
-		{
-			// check for the current selection
-			if (curSelectedScript != null)
-				curSelectedScript();
-
-			updateSelections();
-		}
-
-		if (Init.gameSettings.get(activeSubgroup.members[curSelection].text) != null)
-		{
-			// lol had to set this or else itd tell me expected }
-			var currentSetting = Init.gameSettings.get(activeSubgroup.members[curSelection].text);
-			var textValue = currentSetting[2];
-			if (textValue == null)
-				textValue = "";
-
-			if (finalText != textValue)
-			{
-				regenInfoText();
-
-				var textSplit = [];
-				finalText = textValue;
-				textSplit = finalText.split("");
-
-				var loopTimes = 0;
-				infoTimer = new FlxTimer().start(0.025, function(tmr:FlxTimer)
-				{
-					infoText.text += textSplit[loopTimes];
-					infoText.screenCenter(X);
-
-					loopTimes++;
-				}, textSplit.length);
-			}
-		}
-
-		// move the attachments if there are any
-		for (setting in currentAttachmentMap.keys())
-		{
-			if ((setting != null) && (currentAttachmentMap.get(setting) != null))
-			{
-				var thisAttachment = currentAttachmentMap.get(setting);
-				thisAttachment.x = setting.x - 100;
-				thisAttachment.y = setting.y - 50;
-			}
-		}
-
-		if (controls.BACK)
-		{
-			if (curCategory != 'main')
-				loadSubgroup('main');
-			else
-				Main.switchState(this, new MainMenuState());
-		}
-	}
-
-	private function regenInfoText()
-	{
-		if (infoTimer != null)
-			infoTimer.cancel();
-		if (infoText != null)
-			infoText.text = "";
-	}
-
-	function updateSelections()
-	{
+		// Vertical Navigation with Hold Repeat
+		var upP = controls.UI_UP_P;
+		var downP = controls.UI_DOWN_P;
 		var up = controls.UI_UP;
 		var down = controls.UI_DOWN;
-		var up_p = controls.UI_UP_P;
-		var down_p = controls.UI_DOWN_P;
-		var controlArray:Array<Bool> = [up, down, up_p, down_p];
 
-		if (controlArray.contains(true))
+		if (upP)
 		{
-			for (i in 0...controlArray.length)
+			updateSelection(-1);
+			holdUpTime = 0;
+		}
+		else if (up)
+		{
+			holdUpTime += elapsed;
+			if (holdUpTime > 0.35)
 			{
-				// here we check which keys are pressed
-				if (controlArray[i] == true)
+				updateSelection(-1);
+				holdUpTime = 0.28;
+			}
+		}
+		else
+		{
+			holdUpTime = 0;
+		}
+
+		if (downP)
+		{
+			updateSelection(1);
+			holdDownTime = 0;
+		}
+		else if (down)
+		{
+			holdDownTime += elapsed;
+			if (holdDownTime > 0.35)
+			{
+				updateSelection(1);
+				holdDownTime = 0.28;
+			}
+		}
+		else
+		{
+			holdDownTime = 0;
+		}
+
+		// Horizontal Adjustment for Selectors & Numbers
+		var leftP = controls.UI_LEFT_P;
+		var rightP = controls.UI_RIGHT_P;
+		var left = controls.UI_LEFT;
+		var right = controls.UI_RIGHT;
+
+		if (leftP)
+		{
+			adjustValue(-1);
+			holdLeftTime = 0;
+		}
+		else if (left)
+		{
+			holdLeftTime += elapsed;
+			if (holdLeftTime > 0.35)
+			{
+				var mult = (holdLeftTime > 1.5) ? 5 : 1;
+				adjustValue(-1 * mult);
+				holdLeftTime = 0.28;
+			}
+		}
+		else
+		{
+			holdLeftTime = 0;
+		}
+
+		if (rightP)
+		{
+			adjustValue(1);
+			holdRightTime = 0;
+		}
+		else if (right)
+		{
+			holdRightTime += elapsed;
+			if (holdRightTime > 0.35)
+			{
+				var mult = (holdRightTime > 1.5) ? 5 : 1;
+				adjustValue(1 * mult);
+				holdRightTime = 0.28;
+			}
+		}
+		else
+		{
+			holdRightTime = 0;
+		}
+
+		// Accept / Action Trigger
+		if (controls.ACCEPT)
+		{
+			handleAccept();
+		}
+		else if (controls.BACK || FlxG.keys.justPressed.ESCAPE)
+		{
+			handleBack();
+		}
+
+		// Smooth vertical scrolling keeping X perfectly straight
+		updatePositions(elapsed);
+	}
+
+	function updateSelection(change:Int = 0, playSound:Bool = true):Void
+	{
+		if (change != 0 && playSound)
+			FlxG.sound.play(Paths.sound('system/scroll'));
+
+		curSelection += change;
+
+		if (curSelection < 0)
+			curSelection = currentOptions.length - 1;
+		else if (curSelection >= currentOptions.length)
+			curSelection = 0;
+
+		categorySelections.set(currentCategory, curSelection);
+
+		// Update description bar
+		if (curSelection >= 0 && curSelection < currentOptions.length)
+			descText.text = currentOptions[curSelection].description;
+		else
+			descText.text = "";
+
+		// Update alphas & colors
+		for (i in 0...currentOptions.length)
+		{
+			var isCurrent = (i == curSelection);
+			var targetAlpha = isCurrent ? 1.0 : 0.45;
+
+			grpOptionTexts.members[i].alpha = targetAlpha;
+			grpValueTexts.members[i].alpha = targetAlpha;
+
+			grpOptionTexts.members[i].color = isCurrent ? 0xFF35A7FF : FlxColor.WHITE;
+		}
+	}
+
+	function updatePositions(elapsed:Float):Void
+	{
+		var centerY = FlxG.height * 0.46;
+		var spacing = 58.0;
+
+		for (i in 0...currentOptions.length)
+		{
+			var targetY = centerY + ((i - curSelection) * spacing);
+
+			var optTxt = grpOptionTexts.members[i];
+			var valTxt = grpValueTexts.members[i];
+
+			// Smooth Y lerp
+			optTxt.y = FlxMath.lerp(optTxt.y, targetY, Math.min(1.0, elapsed * 14));
+			valTxt.y = optTxt.y;
+
+			// Strictly straight column at fixed X
+			optTxt.x = 120;
+			valTxt.x = 860;
+
+			if (i == curSelection)
+			{
+				selectorCursor.y = optTxt.y - 2;
+				selectorCursor.x = 80;
+			}
+		}
+	}
+
+	function handleAccept():Void
+	{
+		if (curSelection < 0 || curSelection >= currentOptions.length) return;
+
+		var opt = currentOptions[curSelection];
+
+		switch (opt.type)
+		{
+			case CHECKMARK:
+				var currentVal:Bool = Init.trueSettings.get(opt.id) == true;
+				var newVal:Bool = !currentVal;
+				Init.trueSettings.set(opt.id, newVal);
+				Init.saveSettings();
+				Init.updateAll();
+
+				refreshOptionValues();
+				FlxG.sound.play(Paths.sound('system/confirm'));
+
+			case CATEGORY:
+				FlxG.sound.play(Paths.sound('system/confirm'));
+				loadCategory(opt.id);
+
+			case ACTION:
+				if (opt.action != null)
+					opt.action();
+
+			case SELECTOR(_), NUMBER(_, _, _, _):
+				adjustValue(1);
+		}
+	}
+
+	function adjustValue(change:Int):Void
+	{
+		if (curSelection < 0 || curSelection >= currentOptions.length) return;
+
+		var opt = currentOptions[curSelection];
+
+		switch (opt.type)
+		{
+			case CHECKMARK:
+				handleAccept();
+
+			case SELECTOR(options):
+				if (options.length == 0) return;
+
+				var currentVal = Std.string(Init.trueSettings.get(opt.id));
+				var currentIdx = options.indexOf(currentVal);
+				if (currentIdx == -1) currentIdx = 0;
+
+				var newIdx = currentIdx + change;
+				if (newIdx < 0) newIdx = options.length - 1;
+				else if (newIdx >= options.length) newIdx = 0;
+
+				var chosenString = options[newIdx];
+
+				if (opt.id == "Framerate Cap")
 				{
-					// if single press
-					if (i > 1)
-					{
-						if (i == 2)
-							selectOption(curSelection - 1);
-						else if (i == 3)
-							selectOption(curSelection + 1);
-					}
-				}
-			}
-		}
-	}
-
-	private function returnSubgroup(groupName:String):FlxTypedGroup<Alphabet>
-	{
-		var newGroup:FlxTypedGroup<Alphabet> = new FlxTypedGroup<Alphabet>();
-
-		for (i in 0...categoryMap.get(groupName)[0].length)
-		{
-			if (Init.gameSettings.get(categoryMap.get(groupName)[0][i][0]) == null
-				|| Init.gameSettings.get(categoryMap.get(groupName)[0][i][0])[3] != Init.FORCED)
-			{
-				var thisOption:Alphabet = new Alphabet(0, 0, categoryMap.get(groupName)[0][i][0], true, false);
-				thisOption.screenCenter();
-				thisOption.y += (90 * (i - Math.floor(categoryMap.get(groupName)[0].length / 2)));
-				thisOption.targetY = i;
-				thisOption.disableX = true;
-				// hardcoded main so it doesnt have scroll
-				if (groupName != 'main')
-					thisOption.isMenuItem = true;
-				thisOption.alpha = 0.6;
-				newGroup.add(thisOption);
-			}
-		}
-
-		return newGroup;
-	}
-
-	private function returnExtrasMap(alphabetGroup:FlxTypedGroup<Alphabet>):Map<Alphabet, Dynamic>
-	{
-		var extrasMap:Map<Alphabet, Dynamic> = new Map<Alphabet, Dynamic>();
-		for (letter in alphabetGroup)
-		{
-			if (Init.gameSettings.get(letter.text) != null)
-			{
-				switch (Init.gameSettings.get(letter.text)[1])
-				{
-					case Init.SettingTypes.Checkmark:
-						// checkmark
-						var checkmark = Assets.generateCheckmark(10, letter.y, 'checkboxThingie', 'base', 'default', 'UI');
-						checkmark.playAnim(Std.string(Init.trueSettings.get(letter.text)) + ' finished');
-
-						extrasMap.set(letter, checkmark);
-					case Init.SettingTypes.Selector:
-						// selector
-						var selector:Selector = new Selector(10, letter.y, letter.text, Init.gameSettings.get(letter.text)[4],
-							(letter.text == 'Framerate Cap') ? true : false, false);
-
-						extrasMap.set(letter, selector);
-					default:
-						// dont do ANYTHING
-				}
-			}
-		}
-
-		return extrasMap;
-	}
-
-	/*
-		This is the base option return
-	 */
-	public function doNothingOption() {}
-
-	public function getFromOption()
-	{
-		if (Init.gameSettings.get(activeSubgroup.members[curSelection].text) != null)
-		{
-			switch (Init.gameSettings.get(activeSubgroup.members[curSelection].text)[1])
-			{
-				case Init.SettingTypes.Checkmark:
-					// checkmark basics lol
-					if (controls.ACCEPT)
-					{
-						lockedMovement = true;
-						FlxFlicker.flicker(activeSubgroup.members[curSelection], 0.5, 0.06 * 2, true, false, function(flick:FlxFlicker)
-						{
-							// LMAO THIS IS HUGE
-							Init.trueSettings.set(activeSubgroup.members[curSelection].text,
-								!Init.trueSettings.get(activeSubgroup.members[curSelection].text));
-							updateCheckmark(currentAttachmentMap.get(activeSubgroup.members[curSelection]),
-								Init.trueSettings.get(activeSubgroup.members[curSelection].text));
-
-							// save the setting
-							Init.saveSettings();
-							lockedMovement = false;
-						});
-					}
-				case Init.SettingTypes.Selector:
+					var parsedInt = Std.parseInt(chosenString);
+					Init.trueSettings.set(opt.id, parsedInt != null ? parsedInt : 120);
 					#if !html5
-					var selector:Selector = currentAttachmentMap.get(activeSubgroup.members[curSelection]);
-
-					if (!controls.UI_LEFT)
-						selector.selectorPlay('left');
-					if (!controls.UI_RIGHT)
-						selector.selectorPlay('right');
-
-					if (controls.UI_RIGHT_P)
-						updateSelector(selector, 1);
-					else if (controls.UI_LEFT_P)
-						updateSelector(selector, -1);
+					Main.updateFramerate(Init.trueSettings.get("Framerate Cap"));
 					#end
-				default:
-					// none
-			}
-		}
-	}
-
-	function updateCheckmark(checkmark:FunkinSprites, animation:Bool)
-	{
-		if (checkmark != null)
-			checkmark.playAnim(Std.string(animation));
-	}
-
-	function updateSelector(selector:Selector, updateBy:Int)
-	{
-		var fps = selector.fpsCap;
-		var bgdark = selector.darkBG;
-		if (fps)
-		{
-			// bro I dont even know if the engine works in html5 why am I even doing this
-			// lazily hardcoded fps cap
-			var originalFPS = Init.trueSettings.get(activeSubgroup.members[curSelection].text);
-			var increase = 15 * updateBy;
-			if (originalFPS + increase < 30)
-				increase = 0;
-			// high fps cap
-			if (originalFPS + increase > 360)
-				increase = 0;
-
-			if (updateBy == -1)
-				selector.selectorPlay('left', 'press');
-			else
-				selector.selectorPlay('right', 'press');
-
-			FlxG.sound.play(Paths.sound('system/scroll'));
-
-			originalFPS += increase;
-			selector.chosenOptionString = Std.string(originalFPS);
-			selector.optionChosen.text = Std.string(originalFPS);
-			Init.trueSettings.set(activeSubgroup.members[curSelection].text, originalFPS);
-			Init.saveSettings();
-		}
-		else if (bgdark)
-		{
-			// lazily hardcoded darkness cap
-			var originaldark = Init.trueSettings.get(activeSubgroup.members[curSelection].text);
-			var increase = 5 * updateBy;
-			if (originaldark + increase < 0)
-				increase = 0;
-			// high darkness cap
-			if (originaldark + increase > 100)
-				increase = 0;
-
-			if (updateBy == -1)
-				selector.selectorPlay('left', 'press');
-			else
-				selector.selectorPlay('right', 'press');
-
-			FlxG.sound.play(Paths.sound('system/scroll'));
-
-			originaldark += increase;
-			selector.chosenOptionString = Std.string(originaldark);
-			selector.optionChosen.text = Std.string(originaldark);
-			Init.trueSettings.set(activeSubgroup.members[curSelection].text, originaldark);
-			Init.saveSettings();
-		}
-		else if (!fps && !bgdark)
-		{
-			// get the current option as a number
-			var storedNumber:Int = 0;
-			var newSelection:Int = storedNumber;
-			if (selector.options != null)
-			{
-				for (curOption in 0...selector.options.length)
+				}
+				else
 				{
-					if (selector.options[curOption] == selector.optionChosen.text)
-						storedNumber = curOption;
+					Init.trueSettings.set(opt.id, chosenString);
 				}
 
-				newSelection = storedNumber + updateBy;
-				if (newSelection < 0)
-					newSelection = selector.options.length - 1;
-				else if (newSelection >= selector.options.length)
-					newSelection = 0;
-			}
+				Init.saveSettings();
+				Init.updateAll();
+				refreshOptionValues();
+				FlxG.sound.play(Paths.sound('system/scroll'));
 
-			if (updateBy == -1)
-				selector.selectorPlay('left', 'press');
-			else
-				selector.selectorPlay('right', 'press');
+			case NUMBER(min, max, step, _):
+				var currentNum:Float = Std.parseFloat(Std.string(Init.trueSettings.get(opt.id)));
+				if (Math.isNaN(currentNum)) currentNum = 0.0;
 
-			FlxG.sound.play(Paths.sound('system/scroll'));
+				currentNum += change * step;
+				if (currentNum < min) currentNum = min;
+				if (currentNum > max) currentNum = max;
 
-			selector.chosenOptionString = selector.options[newSelection];
-			selector.optionChosen.text = selector.chosenOptionString;
+				Init.trueSettings.set(opt.id, currentNum);
+				Init.saveSettings();
+				Init.updateAll();
+				refreshOptionValues();
+				FlxG.sound.play(Paths.sound('system/scroll'));
 
-			Init.trueSettings.set(activeSubgroup.members[curSelection].text, selector.chosenOptionString);
-			Init.saveSettings();
+			default:
+				// No adjustment
 		}
 	}
 
-	public function callNewGroup()
+	function handleBack():Void
 	{
-		if (controls.ACCEPT)
+		FlxG.sound.play(Paths.sound('system/cancel'));
+
+		if (currentCategory != "main")
 		{
-			lockedMovement = true;
-			FlxFlicker.flicker(activeSubgroup.members[curSelection], 0.5, 0.06 * 2, true, false, function(flick:FlxFlicker)
-			{
-				loadSubgroup(activeSubgroup.members[curSelection].text);
-			});
+			var prev = (categoryHistory.length > 0) ? categoryHistory.pop() : "main";
+			loadCategory(prev != null ? prev : "main", true);
+		}
+		else
+		{
+			exitMenu();
 		}
 	}
 
-	public function openControlmenu()
+	function openControlsMenu():Void
 	{
-		if (controls.ACCEPT)
-		{
-			lockedMovement = true;
-			FlxFlicker.flicker(activeSubgroup.members[curSelection], 0.5, 0.06 * 2, true, false, function(flick:FlxFlicker)
-			{
-				openSubState(new OptionsSubstate());
-				lockedMovement = false;
-			});
-		}
+		FlxG.sound.play(Paths.sound('system/confirm'));
+		openSubState(new OptionsSubstate());
 	}
 
-	public function exitMenu()
+	function exitMenu():Void
 	{
-		if (controls.ACCEPT)
-		{
-			lockedMovement = true;
-			FlxFlicker.flicker(activeSubgroup.members[curSelection], 0.5, 0.06 * 2, true, false, function(flick:FlxFlicker)
-			{
-				Main.switchState(this, new MainMenuState());
-				lockedMovement = false;
-			});
-		}
+		Init.saveSettings();
+		Main.switchState(this, new MainMenuState());
 	}
 }
-

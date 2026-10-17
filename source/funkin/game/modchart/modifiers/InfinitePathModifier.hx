@@ -27,7 +27,7 @@ class InfinitePathModifier extends PathModifier
 		while (r < 360)
 		{
 			var rad = r * Math.PI / 180;
-			infPath.push(Vector3.get(FlxG.width * 0.5 + FlxMath.fastSin(rad) * 600, FlxG.height * 0.5 + FlxMath.fastSin(rad) * FlxMath.fastCos(rad) * 600, 0));
+			infPath.push(Vector3.get(FlxG.width * 0.5 + Math.sin(rad) * 600, FlxG.height * 0.5 + Math.sin(rad) * Math.cos(rad) * 600, 0));
 
 			r += step;
 		}

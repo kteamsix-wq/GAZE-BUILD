@@ -105,22 +105,16 @@ class FunkinSprites extends FlxAnimate
 	/**
 	 * Carrega o Sparrow Atlas direto na GPU usando a compressao configurada!
 	 */
-	public function loadOptimizedSparrow(key:String, ?library:String, ?textureCompression:Bool = true):FunkinSprites
+	public function loadOptimizedSparrow(key:String, ?library:String, ?textureCompression:Null<Bool> = null):FunkinSprites
 	{
-		// Force texture compression via returnGraphic!
-		var graph:FlxGraphic = Paths.returnGraphic(key, library, textureCompression);
-		if (graph != null)
-		{
-			var xml = sys.io.File.getContent(Paths.file('images/$key.xml', library));
-			frames = FlxAtlasFrames.fromSparrow(graph, xml);
-		}
+		frames = Paths.getSparrowAtlas(key, library, textureCompression);
 		return this;
 	}
 	
 	/**
 	 * Carrega uma imagem simples direto na GPU usando a compressao configurada!
 	 */
-	public function loadOptimizedGraphic(key:String, ?library:String, ?textureCompression:Bool = true):FunkinSprites
+	public function loadOptimizedGraphic(key:String, ?library:String, ?textureCompression:Null<Bool> = null):FunkinSprites
 	{
 		var graph:FlxGraphic = Paths.returnGraphic(key, library, textureCompression);
 		if (graph != null)

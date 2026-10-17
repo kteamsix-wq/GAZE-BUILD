@@ -33,10 +33,11 @@ class Init extends FlxState
 		'Memory Counter' => [true, Checkmark, 'Whether to display approximately how much memory is being used.', NOT_FORCED],
 		'Debug Info' => [false, Checkmark, 'Whether to display information like your game state.', NOT_FORCED],
 		'Disable Antialiasing' => [false, Checkmark, 'Whether to disable Anti-aliasing. Helps improve performance in FPS.', NOT_FORCED],
+		'GPU Caching' => [true, Checkmark, 'Whether to store textures in GPU VRAM and discard CPU RAM (like Codename VRAM-Only). Greatly reduces memory usage.', NOT_FORCED],
 		'No Camera Note Movement' => [false, Checkmark, 'When enabled, left and right notes no longer move the camera.', NOT_FORCED],
 		'Disable Note Splashes' => [false, Checkmark, 'Whether to disable note splashes in gameplay. Useful if you find them distracting.', NOT_FORCED],
-		'Offset' => [Checkmark, 3], // Unused but kept for legacy/compatibility reasons
-		"Clip Style" => ['stepmania', Selector, "Chooses a style for hold note clippings; StepMania: Holds under Receptors; FNF: Holds over receptors", NOT_FORCED, ['StepMania', 'FNF']],
+		'Offset' => [0.0, Selector, 'Audio offset in milliseconds. Adjusts note timing to sync with your audio display.', NOT_FORCED],
+		"Clip Style" => ['StepMania', Selector, "Chooses a style for hold note clippings; StepMania: Holds under Receptors; FNF: Holds over receptors", NOT_FORCED, ['StepMania', 'FNF']],
 		"Framerate Cap" => [120, Selector, 'Define your maximum FPS.', NOT_FORCED, ['']],
 		"Alpha Arrows" => [true, Checkmark, "Makes the arrows at the top of the screen have 100% alpha.", NOT_FORCED],
 		"Alpha Holds" => [true, Checkmark, "Makes the sustain trails have 100% alpha.", NOT_FORCED],
@@ -48,19 +49,34 @@ class Init extends FlxState
 	public static var settingsDescriptions:Map<String, String> = [];
 
 	// Defines default keybinds
+	public static var defaultControls:Map<String, Dynamic> = [
+		'LEFT' => [[FlxKey.A, FlxKey.LEFT], 0],
+		'DOWN' => [[FlxKey.S, FlxKey.DOWN], 1],
+		'UP' => [[FlxKey.W, FlxKey.UP], 2],
+		'RIGHT' => [[FlxKey.D, FlxKey.RIGHT], 3],
+		'RESET' => [[FlxKey.R, FlxKey.NONE], 4],
+		'UI_LEFT' => [[FlxKey.A, FlxKey.LEFT], 5],
+		'UI_DOWN' => [[FlxKey.S, FlxKey.DOWN], 6],
+		'UI_UP' => [[FlxKey.W, FlxKey.UP], 7],
+		'UI_RIGHT' => [[FlxKey.D, FlxKey.RIGHT], 8],
+		'ACCEPT' => [[FlxKey.SPACE, FlxKey.ENTER], 9],
+		'BACK' => [[FlxKey.ESCAPE, FlxKey.BACKSPACE], 10],
+		'PAUSE' => [[FlxKey.ENTER, FlxKey.P], 11],
+	];
+
 	public static var gameControls:Map<String, Dynamic> = [
-		'UP' => [[FlxKey.UP, FlxKey.W], 2],
-		'DOWN' => [[FlxKey.DOWN, FlxKey.S], 1],
-		'LEFT' => [[FlxKey.LEFT, FlxKey.A], 0],
-		'RIGHT' => [[FlxKey.RIGHT, FlxKey.D], 3],
-		'ACCEPT' => [[FlxKey.SPACE, FlxKey.Z, FlxKey.ENTER], 4],
-		'BACK' => [[FlxKey.BACKSPACE, FlxKey.X, FlxKey.ESCAPE], 5],
-		'PAUSE' => [[FlxKey.ENTER, FlxKey.P], 6],
-		'RESET' => [[FlxKey.R, FlxKey.R], 13],
-		'UI_UP' => [[FlxKey.UP, FlxKey.W], 8],
-		'UI_DOWN' => [[FlxKey.DOWN, FlxKey.S], 9],
-		'UI_LEFT' => [[FlxKey.LEFT, FlxKey.A], 10],
-		'UI_RIGHT' => [[FlxKey.RIGHT, FlxKey.D], 11],
+		'LEFT' => [[FlxKey.A, FlxKey.LEFT], 0],
+		'DOWN' => [[FlxKey.S, FlxKey.DOWN], 1],
+		'UP' => [[FlxKey.W, FlxKey.UP], 2],
+		'RIGHT' => [[FlxKey.D, FlxKey.RIGHT], 3],
+		'RESET' => [[FlxKey.R, FlxKey.NONE], 4],
+		'UI_LEFT' => [[FlxKey.A, FlxKey.LEFT], 5],
+		'UI_DOWN' => [[FlxKey.S, FlxKey.DOWN], 6],
+		'UI_UP' => [[FlxKey.W, FlxKey.UP], 7],
+		'UI_RIGHT' => [[FlxKey.D, FlxKey.RIGHT], 8],
+		'ACCEPT' => [[FlxKey.SPACE, FlxKey.ENTER], 9],
+		'BACK' => [[FlxKey.ESCAPE, FlxKey.BACKSPACE], 10],
+		'PAUSE' => [[FlxKey.ENTER, FlxKey.P], 11],
 	];
 
 	override public function create():Void
@@ -130,10 +146,46 @@ class Init extends FlxState
 	 */
 	public static function loadControls():Void
 	{
-		// Only load controls if they exist and match the expected format structure/count
-		if (FlxG.save.data.gameControls != null && Lambda.count(FlxG.save.data.gameControls) == Lambda.count(gameControls))
-			gameControls = FlxG.save.data.gameControls;
+		if (FlxG.save.data.gameControls != null)
+		{
+			try
+			{
+				var saved:Map<String, Dynamic> = FlxG.save.data.gameControls;
+				for (key in gameControls.keys())
+				{
+					if (saved.exists(key) && saved.get(key) != null && saved.get(key)[0] != null)
+					{
+						var savedArr:Array<Dynamic> = saved.get(key)[0];
+						if (savedArr.length > 0)
+						{
+							var newArr:Array<FlxKey> = [];
+							for (item in savedArr)
+							{
+								if (item != null)
+									newArr.push(cast item);
+							}
+							if (newArr.length > 0)
+								gameControls.get(key)[0] = newArr;
+						}
+					}
+				}
+			}
+			catch (e:Dynamic)
+			{
+				trace('Error loading controls: $e');
+			}
+		}
 
+		saveControls();
+	}
+
+	public static function resetControls():Void
+	{
+		for (key in defaultControls.keys())
+		{
+			var defArr:Array<Dynamic> = defaultControls.get(key)[0];
+			gameControls.set(key, [[defArr[0], defArr[1]], defaultControls.get(key)[1]]);
+		}
 		saveControls();
 	}
 

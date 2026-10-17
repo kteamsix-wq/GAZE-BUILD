@@ -33,12 +33,7 @@ class MusicBeatState extends FunkinState
 
 	override function create()
 	{
-		if ((!Std.isOfType(this, funkin.states.PlayState)) && (!Std.isOfType(this, funkin.editors.ChartEditor)))
-		{
-			Paths.clearStoredMemory();
-			Paths.clearUnusedMemory();
-			backend.FunkinMemory.purgeCache(true);
-		}
+		backend.FunkinMemory.init();
 
 		if (transIn != null)
 			trace('reg ' + transIn.region);
@@ -52,6 +47,12 @@ class MusicBeatState extends FunkinState
 
 	override function update(elapsed:Float)
 	{
+		if (!Std.isOfType(this, funkin.states.PlayState) && !Std.isOfType(this, funkin.editors.ChartEditor))
+		{
+			if (FlxG.sound.music != null && FlxG.sound.music.playing)
+				Conductor.update(elapsed, FlxG.sound.music);
+		}
+
 		super.update(elapsed);
 		updateContents();
 	}
@@ -65,48 +66,32 @@ class MusicBeatState extends FunkinState
 
 		if (curStep > oldStep)
 		{
-			if (curStep > oldStep + 1)
+			var stepsToCatchUp:Int = curStep - oldStep;
+			// Prevent freeze / stutter cascade on large lag spike
+			if (stepsToCatchUp > 12)
 			{
-				for (i in (oldStep + 1)...(curStep + 1))
-				{
-					curStep = i;
-					stepHit();
-				}
+				oldStep = curStep - 1;
 			}
-			else
+
+			for (i in (oldStep + 1)...(curStep + 1))
+			{
+				curStep = i;
+				curDecBeat = curStep / 4.0;
+				curBeat = Math.floor(curDecBeat);
 				stepHit();
-		}
-		else if (curStep < oldStep)
-		{
-			stepHit();
+			}
 		}
 	}
 
 	public function updateBeat():Void
 	{
-		curDecBeat = curDecStep / 4;
+		curDecBeat = curDecStep / 4.0;
 		curBeat = Math.floor(curDecBeat);
 	}
 
 	public function updateCurStep():Void
 	{
-		var lastChange:BPMChangeEvent = {
-			stepTime: 0,
-			songTime: 0,
-			bpm: 0
-		}
-		
-		for (i in 0...Conductor.bpmChangeMap.length)
-		{
-			if (Conductor.songPosition >= Conductor.bpmChangeMap[i].songTime)
-				lastChange = Conductor.bpmChangeMap[i];
-			else
-				break;
-		}
-
-		var stepC = Conductor.stepCrochet; 
-		if (lastChange.bpm > 0) stepC = ((60 / lastChange.bpm) * 1000) / 4; 
-		curDecStep = lastChange.stepTime + ((Conductor.songPosition - lastChange.songTime) / stepC);
+		curDecStep = Conductor.calculateDecStep(Conductor.songPosition);
 		curStep = Math.floor(curDecStep);
 	}
 

@@ -9,6 +9,12 @@ class FunkinState extends FlxUIState
 {
 	override function create()
 	{
+		if (members == null)
+		{
+			members = [];
+			length = 0;
+		}
+
 		super.create();
 		
 		if (!FlxTransitionableState.skipNextTransIn)

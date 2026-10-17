@@ -92,12 +92,17 @@ class PauseSubState extends MusicBeatSubState
 		camera = FlxG.cameras.list[FlxG.cameras.list.length - 1];
 	}
 
+	var transitioning:Bool = false;
+
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
 
-		if (pauseMusic.volume < 0.5)
+		if (pauseMusic != null && pauseMusic.volume < 0.5)
 			pauseMusic.volume += 0.01 * elapsed;
+
+		if (transitioning)
+			return;
 
 		var upP = controls.UI_UP_P;
 		var downP = controls.UI_DOWN_P;
@@ -108,9 +113,15 @@ class PauseSubState extends MusicBeatSubState
 
 		if (accepted)
 		{
-			pauseMusic.stop();
-			FlxG.sound.list.remove(pauseMusic);
-			pauseMusic.destroy();
+			transitioning = true;
+
+			if (pauseMusic != null)
+			{
+				pauseMusic.stop();
+				FlxG.sound.list.remove(pauseMusic, true);
+				pauseMusic.destroy();
+				pauseMusic = null;
+			}
 
 			var daSelected:String = menuItems[curSelected];
 
