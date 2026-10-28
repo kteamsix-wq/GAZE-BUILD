@@ -177,7 +177,7 @@ class OptionsMenuState extends MusicBeatState
 		categories.set("appearance", [
 			{id: "Alpha Arrows", name: "RECEPTOR ARROWS ALPHA", description: "Ensures the receptor arrows at the top/bottom are at 100% full opacity.", type: CHECKMARK},
 			{id: "Alpha Holds", name: "HOLD TRAILS ALPHA", description: "Ensures sustain trails are rendered at 100% full opacity.", type: CHECKMARK},
-			{id: "Clip Style", name: "HOLD CLIP STYLE", description: "Chooses hold note clipping style: StepMania (under receptors) or FNF (over receptors).", type: SELECTOR(["StepMania", "FNF"])}
+			{id: "Clip Style", name: "HOLD CLIP STYLE", description: "Chooses hold note clipping style: above (in front of receptors) or back (behind receptors).", type: SELECTOR(["above", "back"])}
 		]);
 
 		// Graphics & Display settings

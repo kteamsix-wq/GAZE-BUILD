@@ -241,7 +241,7 @@ class TitleState extends MusicBeatState
 			case 4:
 				deleteCoolText();
 			case 5:
-				createCoolText(['K Slice']);
+				createCoolText(['Gaze Slice']);
 			case 7:
 				addMoreText('newgrounds');
 				ngSpr.visible = true;

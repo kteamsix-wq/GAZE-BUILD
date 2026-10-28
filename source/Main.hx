@@ -98,8 +98,19 @@ class Main extends Sprite
 
 		PlayerSettings.init();
 
+		#if hxvlc
+		try {
+			hxvlc.util.Handle.init();
+		} catch (e:Dynamic) {
+			trace('Could not initialize hxvlc: ' + e);
+		}
+		#end
+
 		infoCounter = new Overlay(0, 0);
 		addChild(infoCounter);
+
+		funkin.objects.DevConsole.init();
+		addChild(funkin.objects.DevConsole.instance);
 	}
 
 	public static function switchState(curState:FlxState, target:FlxState)

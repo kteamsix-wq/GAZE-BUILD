@@ -56,8 +56,9 @@ class ModState extends MusicBeatState
 			script.setVar('OptionsMenuState', funkin.states.OptionsMenuState);
 			script.setVar('OptionsState', funkin.states.OptionsMenuState);
 			script.setVar('CreditsState', funkin.states.CreditsState);
-            script.setVar('StoryMenuState', funkin.states.ModsMenuState);
-            script.setVar('CollectionRoomState', funkin.states.ModsMenuState);
+			script.setVar('ModsMenuState', funkin.states.ModsMenuState);
+			script.setVar('StoryMenuState', funkin.states.ModsMenuState);
+			script.setVar('CollectionRoomState', funkin.states.ModsMenuState);
             
 			script.setVar('add', function(obj:flixel.FlxBasic) { this.add(obj); });
 			script.setVar('insert', function(pos:Int, obj:flixel.FlxBasic) { this.insert(pos, obj); });
@@ -66,6 +67,16 @@ class ModState extends MusicBeatState
 			// Also add the function to easily switch states
 			script.setVar('switchState', function(target:FlxState) {
 				Main.switchState(this, target);
+			});
+			script.setVar('playSong', function(nameSong:Dynamic, ?songList:Dynamic, ?difficulty:Null<Int>, ?customReturnState:Dynamic) {
+				var retTarget:Dynamic = customReturnState != null ? customReturnState : this.stateName;
+				funkin.states.PlayState.playSong(nameSong, songList, difficulty, retTarget);
+			});
+			script.setVar('setReturnState', function(target:Dynamic) {
+				funkin.states.PlayState.setReturnState(target);
+			});
+			script.setVar('getReturnState', function() {
+				return funkin.states.PlayState.getReturnState();
 			});
 			
 			script.call('create');

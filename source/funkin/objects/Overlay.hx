@@ -31,6 +31,7 @@ import Main;
  * Codename Engine-styled Framerate, MemoryCounter, BuildField & Debug Categories Overlay.
  *
  * Features:
+ * - F2 shortcut: Opens Codename-styled Developer Console Prompt (interactive command line & HScript REPL)
  * - FramerateCounter: Large `fpsNum` (18pt) + smaller `FPS` label (12pt)
  * - MemoryCounter: `memoryText` (12pt) + `memoryPeakText` (12pt @ 0.5 alpha) using `FunkinMemory.currentMemUsage()`
  * - BuildField: Engine version & state indicator
@@ -201,8 +202,13 @@ class Overlay extends Sprite
 
 	function onKeyDown(e:KeyboardEvent):Void
 	{
+		// F2: Toggle Codename-style Developer Console Prompt
+		if (e.keyCode == 113)
+		{
+			funkin.objects.DevConsole.toggle();
+		}
 		// F3: Toggle Debug Categories
-		if (e.keyCode == 114)
+		else if (e.keyCode == 114)
 		{
 			detailedMode = !detailedMode;
 			forceUpdate();

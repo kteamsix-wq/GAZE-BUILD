@@ -828,8 +828,17 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 			FlxTween.tween(staticArrow, {y: staticArrow.initialY, alpha: staticArrow.setAlpha}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
 		}
 
-		add(receptors);
-		add(holdsGroup);
+		var clipStyle:String = Std.string(Init.trueSettings.get('Clip Style')).toLowerCase();
+		if (clipStyle == 'back')
+		{
+			add(holdsGroup);
+			add(receptors);
+		}
+		else
+		{
+			add(receptors);
+			add(holdsGroup);
+		}
 		add(notesGroup);
 		if (noteSplashes)
 			add(splashNotes);
@@ -866,7 +875,7 @@ class Strumline extends FlxTypedGroup<FlxBasic>
 		var splashSkin:String = (coolNote != null && coolNote.noteSkin != null && coolNote.noteSkin != 'default') ? coolNote.noteSkin : noteSkin;
 		splash.playSplash(coolNote.noteData, PlayState.assetModifier, splashSkin);
 		var receptor = receptors.members[coolNote.noteData];
-		splash.setPosition(receptor.x - (splash.width / 4), receptor.y - (splash.height / 4));
+		splash.setPosition(receptor.x - (splash.width / 4) - 30, receptor.y - (splash.height / 4) - 20);
 	}
 
 	public function push(newNote:Note)

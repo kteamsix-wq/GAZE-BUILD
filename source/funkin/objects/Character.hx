@@ -79,9 +79,9 @@ class Character extends FunkinSprites
 	public var firstDeathAnim:String = 'firstDeath';
 	public var loopDeathAnim:String = 'deathLoop';
 	public var confirmDeathAnim:String = 'deathConfirm';
-	public var firstDeathSound:String = 'fnf_loss_sfx';
-	public var loopDeathMusic:String = 'gameOver';
-	public var confirmDeathSound:String = 'gameOverEnd';
+	public var firstDeathSound:String = 'system/gameover/fnf_loss_sfx';
+	public var loopDeathMusic:String = 'system/gameover/gameOver';
+	public var confirmDeathSound:String = 'system/gameover/gameOverEnd';
 
 	public var characterData:CharacterData;
 	public var adjustPos:Bool = true;
@@ -89,6 +89,7 @@ class Character extends FunkinSprites
 	public var vocalsFile:String = null;
 	public var specialAnim:Bool = false;
 	public var animLocked:Bool = false;
+	public var ignoreArrows:Bool = false;
 
 	public function new(?isPlayer:Bool = false)
 	{
@@ -100,6 +101,9 @@ class Character extends FunkinSprites
 	{
 		curCharacter = character;
 		antialiasing = true;
+		scale.set(1, 1);
+		updateHitbox();
+		animOffsets = new Map<String, Array<Dynamic>>();
 
 		characterData = {
 			offsetY: 0,
@@ -198,6 +202,7 @@ class Character extends FunkinSprites
 
 	public function loadCharacterFile(json:CharacterFile, x:Float, y:Float):Character
 	{
+		animOffsets = new Map<String, Array<Dynamic>>();
 		antialiasing = true;
 
 		characterData = {
@@ -218,11 +223,9 @@ class Character extends FunkinSprites
 			loadOptimizedSparrow(json.image);
 		}
 		
-		if (json.scale != null && json.scale != 1)
-		{
-			scale.set(json.scale, json.scale);
-			updateHitbox();
-		}
+		var newScale:Float = (json.scale != null) ? json.scale : 1.0;
+		scale.set(newScale, newScale);
+		updateHitbox();
 		
 		if (json.position != null)
 		{
@@ -401,6 +404,11 @@ class Character extends FunkinSprites
 				playAnim('idlePost', true, false, 0);
 		}
 
+		if (ignoreArrows && isAnimFinished())
+		{
+			ignoreArrows = false;
+		}
+
 		if (specialAnim && !animLocked && isAnimFinished())
 		{
 			specialAnim = false;
@@ -418,9 +426,10 @@ class Character extends FunkinSprites
 		{
 			specialAnim = false;
 			animLocked = false;
+			ignoreArrows = false;
 		}
 
-		if (!debugMode && !skipDance && (!specialAnim || forced) && (!animLocked || forced))
+		if (!debugMode && !skipDance && (!specialAnim || forced) && (!animLocked || forced) && (!ignoreArrows || forced))
 		{
 			var curCharSimplified:String = simplifyCharacter();
 			switch (curCharSimplified)
@@ -452,6 +461,12 @@ class Character extends FunkinSprites
 
 	override public function playAnim(AnimName:String, Force:Bool = false, Reversed:Bool = false, Frame:Int = 0):Void
 	{
+		if (ignoreArrows && !isAnimFinished() && (AnimName.startsWith('sing') || AnimName.startsWith('miss')))
+			return;
+
+		if (ignoreArrows && isAnimFinished())
+			ignoreArrows = false;
+
 		if (hasAnimation(AnimName))
 			super.playAnim(AnimName, Force, Reversed, Frame);
 

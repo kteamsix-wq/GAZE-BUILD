@@ -57,7 +57,7 @@
 
 	<haxedev set='webgl' if="html5" />
 
-	<haxelib name="hxCodec" />
+	<haxelib name="hxvlc" if="desktop || mobile" />
 	<haxelib name="hscript" />
 	<haxelib name="flixel" />
 	<haxelib name="flixel-animate" />

@@ -1318,11 +1318,37 @@ class Paths
 
 	public static function video(key:String):String
 	{
-		var cleanKey:String = key;
+		if (key == null) return "";
+		var cleanKey:String = key.trim();
 		if (cleanKey.endsWith('.' + VIDEO_EXT))
 			cleanKey = cleanKey.substr(0, cleanKey.length - (VIDEO_EXT.length + 1));
+		if (cleanKey.startsWith('videos/'))
+			cleanKey = cleanKey.substring(7);
 
-		return getPath('videos/$cleanKey.$VIDEO_EXT', BINARY);
+		var gottenPath:String = getPath('videos/$cleanKey.$VIDEO_EXT', BINARY);
+		var colonIndex:Int = gottenPath.indexOf(':');
+		#if sys
+		if (colonIndex > 1 && !FileSystem.exists(gottenPath))
+		{
+			var stripped:String = gottenPath.substring(colonIndex + 1);
+			if (FileSystem.exists(stripped))
+				gottenPath = stripped;
+		}
+
+		if (!FileSystem.exists(gottenPath))
+		{
+			for (mod in backend.Mods.getModDirectories())
+			{
+				var candidate:String = 'mods/$mod/videos/$cleanKey.$VIDEO_EXT';
+				if (FileSystem.exists(candidate))
+					return candidate;
+			}
+			if (FileSystem.exists('videos/$cleanKey.$VIDEO_EXT'))
+				return 'videos/$cleanKey.$VIDEO_EXT';
+		}
+		#end
+
+		return gottenPath;
 	}
 
 	public static function shader(key:String):FunkinShader

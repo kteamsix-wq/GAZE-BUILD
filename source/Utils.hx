@@ -56,6 +56,8 @@ class Utils
 		{
 			if (song != null)
 			{
+				if (FlxG.sound != null && FlxG.sound.list != null)
+					FlxG.sound.list.remove(song, true);
 				song.stop();
 				song.destroy();
 			}

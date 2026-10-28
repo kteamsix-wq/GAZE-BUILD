@@ -133,7 +133,7 @@ class PauseSubState extends MusicBeatSubState
 					Main.switchState(this, new PlayState());
 				case "Exit to menu":
 					PlayState.deaths = 0;
-					Main.switchState(this, new FreeplayState());
+					Main.switchState(this, PlayState.getReturnState());
 			}
 		}
 	}

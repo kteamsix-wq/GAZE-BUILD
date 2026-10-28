@@ -123,41 +123,53 @@ class Stage extends FlxTypedGroup<FlxBasic>
 				parser.allowJSON = true;
 				parser.allowMetadata = true;
 
-				var scriptText = File.getContent(scriptPath);
-				var strippedText = "";
-				for (line in scriptText.split("\n")) {
-					var trimmed = StringTools.trim(line);
-					if (!StringTools.startsWith(trimmed, "import ") && !StringTools.startsWith(trimmed, "package ")) {
-						strippedText += line + "\n";
-					}
-				}
-				var ast = parser.parseString(strippedText);
-
 				interp = new CustomInterp();
+
+				// Dynamic import helpers available inside Stage HScript
+				interp.variables.set("importClass", function(className:String, ?alias:String):Dynamic {
+					return HScriptHandler.importClassToInterp(interp, className, alias);
+				});
+				interp.variables.set("resolveClass", function(className:String):Dynamic {
+					return HScriptHandler.resolveImport(className);
+				});
 
 				// Expose useful classes to the script
 				interp.variables.set("Math", Math);
 				interp.variables.set("Std", Std);
 				interp.variables.set("StringTools", StringTools);
+				interp.variables.set("Sys", Sys);
+				interp.variables.set("Type", Type);
+				interp.variables.set("Reflect", Reflect);
+				interp.variables.set("Json", haxe.Json);
 				interp.variables.set("FlxG", FlxG);
 				interp.variables.set("FlxSprite", FlxSprite);
+				interp.variables.set("FlxObject", flixel.FlxObject);
+				interp.variables.set("FlxMath", flixel.math.FlxMath);
+				interp.variables.set("FlxTimer", flixel.util.FlxTimer);
 				interp.variables.set("FlxTween", FlxTween);
+				interp.variables.set("FlxTweenType", HScriptHandler.getFlxTweenTypeProxy());
+				interp.variables.set("FlxEase", flixel.tweens.FlxEase);
+				interp.variables.set("FlxFlicker", flixel.effects.FlxFlicker);
+				interp.variables.set("FlxGroup", flixel.group.FlxGroup.FlxTypedGroup);
+				interp.variables.set("FlxTypedGroup", flixel.group.FlxGroup.FlxTypedGroup);
+				interp.variables.set("FlxSpriteGroup", flixel.group.FlxSpriteGroup);
+				interp.variables.set("FlxBackdrop", flixel.addons.display.FlxBackdrop);
+				interp.variables.set("FlxText", flixel.text.FlxText);
+				interp.variables.set("FlxColor", HScriptHandler.getFlxColorProxy());
+				interp.variables.set("FlxAxes", HScriptHandler.getFlxAxesProxy());
+				interp.variables.set("FlxTextAlign", HScriptHandler.getFlxTextAlignProxy());
+				interp.variables.set("FlxTextBorderStyle", HScriptHandler.getFlxTextBorderStyleProxy());
+				interp.variables.set("FlxKey", HScriptHandler.getFlxKeyProxy());
+				interp.variables.set("FlxPoint", flixel.math.FlxPoint.FlxBasePoint);
+				interp.variables.set("BlendMode", HScriptHandler.getBlendModeProxy());
 				interp.variables.set("FunkinSprites", FunkinSprites);
 				interp.variables.set("Paths", Paths);
 				interp.variables.set("PlayState", PlayState);
 				interp.variables.set("Conductor", Conductor);
 				interp.variables.set("CoolUtil", CoolUtil);
-				interp.variables.set("FlxColor", {
-					BLACK: flixel.util.FlxColor.BLACK,
-					WHITE: flixel.util.FlxColor.WHITE,
-					RED: flixel.util.FlxColor.RED,
-					GREEN: flixel.util.FlxColor.GREEN,
-					BLUE: flixel.util.FlxColor.BLUE,
-					TRANSPARENT: flixel.util.FlxColor.TRANSPARENT,
-					fromRGB: flixel.util.FlxColor.fromRGB,
-					fromString: flixel.util.FlxColor.fromString
-				});
-				interp.variables.set("FlxEase", flixel.tweens.FlxEase);
+				var curSongName:String = (PlayState.SONG != null && PlayState.SONG.song != null) ? PlayState.SONG.song.toLowerCase() : '';
+				interp.variables.set("songName", curSongName);
+				interp.variables.set("curSong", curSongName);
 				
 				// Shader Classes & Helpers
 				interp.variables.set("FunkinShader", backend.FunkinShader.FunkinShaderImpl);
@@ -219,7 +231,24 @@ class Stage extends FlxTypedGroup<FlxBasic>
 					interp.variables.set("camPosTo", function(?x:Null<Float>, ?y:Null<Float>, ?timeSteps:Float = 0, ?ease:String = 'linear') {
 						if (PlayState.instance != null) PlayState.instance.camPosTo(x, y, timeSteps, ease);
 					});
+					interp.variables.set("playVideo", function(videoName:String, ?shouldCenter:Bool = true, ?scale:Float = 1.0):Dynamic {
+						if (PlayState.instance != null) return PlayState.instance.playVideo(videoName, shouldCenter, scale);
+						return null;
+					});
+					interp.variables.set("startVideo", function(nameOrPath:String, ?onComplete:Void->Void) {
+						if (PlayState.instance != null) PlayState.instance.startVideo(nameOrPath, onComplete);
+					});
+					interp.variables.set("skipCutscene", function() {
+						if (PlayState.instance != null) PlayState.instance.skipCutscene();
+					});
 				}
+				#if hxvlc
+				interp.variables.set("FlxVideoSprite", hxvlc.flixel.FlxVideoSprite);
+				interp.variables.set("FlxVideo", hxvlc.flixel.FlxVideo);
+				#end
+				interp.variables.set("playSong", funkin.states.PlayState.playSong);
+				interp.variables.set("setReturnState", funkin.states.PlayState.setReturnState);
+				interp.variables.set("getReturnState", funkin.states.PlayState.getReturnState);
 
 				// Expose stage properties and add() function
 				interp.variables.set("stage", this);
@@ -290,6 +319,10 @@ class Stage extends FlxTypedGroup<FlxBasic>
 					return 0.0;
 				});
 
+				var scriptText = File.getContent(scriptPath);
+				var strippedText = HScriptHandler.preprocessScript(scriptText, interp);
+				var ast = parser.parseString(strippedText);
+
 				interp.execute(ast);
 				callScript("create", []);
 			} catch (e:Dynamic) {
@@ -358,7 +391,7 @@ class Stage extends FlxTypedGroup<FlxBasic>
 
 			var reservedFunctions:Array<String> = [
 				"triggerEvent", "restartSong", "changeCharacter", "camPosTo", 
-				"add", "remove", "insert", "addCameraZoom", "playCharacterAnim"
+				"add", "remove", "insert", "addCameraZoom", "playCharacterAnim", "playVideo"
 			];
 
 			for (name in aliases) {
@@ -401,9 +434,16 @@ class Stage extends FlxTypedGroup<FlxBasic>
 	public function dadPosition(curStage:String, boyfriend:Character, dad:Character, gf:Character, camPos:FlxPoint):Void
 	{
 		if (stageData != null) {
-			dad.setPosition(stageData.DAD_POS[0], stageData.DAD_POS[1]);
-			boyfriend.setPosition(stageData.BF_POS[0], stageData.BF_POS[1]);
-			gf.setPosition(stageData.GF_POS[0], stageData.GF_POS[1]);
+			var dadX:Float = (stageData.DAD_POS != null && (stageData.DAD_POS[0] != 0 || stageData.DAD_POS[1] != 0)) ? stageData.DAD_POS[0] : 100;
+			var dadY:Float = (stageData.DAD_POS != null && (stageData.DAD_POS[0] != 0 || stageData.DAD_POS[1] != 0)) ? stageData.DAD_POS[1] : 100;
+			var bfX:Float = (stageData.BF_POS != null && (stageData.BF_POS[0] != 0 || stageData.BF_POS[1] != 0)) ? stageData.BF_POS[0] : 770;
+			var bfY:Float = (stageData.BF_POS != null && (stageData.BF_POS[0] != 0 || stageData.BF_POS[1] != 0)) ? stageData.BF_POS[1] : 450;
+			var gfX:Float = (stageData.GF_POS != null && (stageData.GF_POS[0] != 0 || stageData.GF_POS[1] != 0)) ? stageData.GF_POS[0] : 400;
+			var gfY:Float = (stageData.GF_POS != null && (stageData.GF_POS[0] != 0 || stageData.GF_POS[1] != 0)) ? stageData.GF_POS[1] : 130;
+
+			dad.setPosition(dadX, dadY);
+			boyfriend.setPosition(bfX, bfY);
+			gf.setPosition(gfX, gfY);
 			gf.visible = !stageData.GF_HIDE;
 		} else {
 			// Hardcoded fallback

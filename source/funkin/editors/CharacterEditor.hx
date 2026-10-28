@@ -815,7 +815,8 @@ class CharacterEditor extends MusicBeatState
 		if (char != null && cameraCross != null)
 		{
 			var mid = char.getMidpoint();
-			cameraCross.x = mid.x + char.cameraPosition[0] - (cameraCross.width / 2);
+			var ox:Float = (char.flipX) ? -char.cameraPosition[0] : char.cameraPosition[0];
+			cameraCross.x = mid.x + ox - (cameraCross.width / 2);
 			cameraCross.y = mid.y + char.cameraPosition[1] - (cameraCross.height / 2);
 			mid.put();
 		}
@@ -949,7 +950,8 @@ class CharacterEditor extends MusicBeatState
 		// 3. Right button: move character camera
 		if (draggingRight && (deltaWorldX != 0 || deltaWorldY != 0))
 		{
-			char.cameraPosition[0] += Math.round(deltaWorldX);
+			var dX:Float = (char != null && char.flipX) ? -deltaWorldX : deltaWorldX;
+			char.cameraPosition[0] += Math.round(dX);
 			char.cameraPosition[1] += Math.round(deltaWorldY);
 			char.characterData.camOffsetX = char.cameraPosition[0];
 			char.characterData.camOffsetY = char.cameraPosition[1];

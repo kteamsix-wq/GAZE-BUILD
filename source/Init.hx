@@ -37,7 +37,7 @@ class Init extends FlxState
 		'No Camera Note Movement' => [false, Checkmark, 'When enabled, left and right notes no longer move the camera.', NOT_FORCED],
 		'Disable Note Splashes' => [false, Checkmark, 'Whether to disable note splashes in gameplay. Useful if you find them distracting.', NOT_FORCED],
 		'Offset' => [0.0, Selector, 'Audio offset in milliseconds. Adjusts note timing to sync with your audio display.', NOT_FORCED],
-		"Clip Style" => ['StepMania', Selector, "Chooses a style for hold note clippings; StepMania: Holds under Receptors; FNF: Holds over receptors", NOT_FORCED, ['StepMania', 'FNF']],
+		"Clip Style" => ['above', Selector, "Chooses hold note clipping style: above (holds in front of receptors) or back (holds behind receptors).", NOT_FORCED, ['above', 'back']],
 		"Framerate Cap" => [120, Selector, 'Define your maximum FPS.', NOT_FORCED, ['']],
 		"Alpha Arrows" => [true, Checkmark, "Makes the arrows at the top of the screen have 100% alpha.", NOT_FORCED],
 		"Alpha Holds" => [true, Checkmark, "Makes the sustain trails have 100% alpha.", NOT_FORCED],
@@ -131,6 +131,14 @@ class Init extends FlxState
 			capInt = 120;
 		
 		trueSettings.set("Framerate Cap", capInt);
+
+		var clipStyle:Dynamic = trueSettings.get("Clip Style");
+		if (clipStyle == 'StepMania')
+			trueSettings.set("Clip Style", 'back');
+		else if (clipStyle == 'FNF')
+			trueSettings.set("Clip Style", 'above');
+		else if (clipStyle != 'back' && clipStyle != 'above')
+			trueSettings.set("Clip Style", 'above');
 
 		saveSettings();
 		updateAll();

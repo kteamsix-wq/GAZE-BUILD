@@ -28,21 +28,22 @@ class GameOverSubstate extends MusicBeatSubState
 	public static var instance:GameOverSubstate;
 
 	public static var characterName:String = 'bf-dead';
-	public static var deathSoundName:String = 'fnf_loss_sfx';
-	public static var loopSoundName:String = 'gameOver';
-	public static var endSoundName:String = 'gameOverEnd';
+	public static var deathSoundName:String = 'system/gameover/fnf_loss_sfx';
+	public static var loopSoundName:String = 'system/gameover/gameOver';
+	public static var endSoundName:String = 'system/gameover/gameOverEnd';
 	public static var deathDelay:Float = 0;
 
 	public var boyfriend:Boyfriend;
 	var camFollow:FlxObject;
 	var isEnding:Bool = false;
+	var startedDeathLoop:Bool = false;
 
 	public static function resetVariables()
 	{
 		characterName = 'bf-dead';
-		deathSoundName = 'fnf_loss_sfx';
-		loopSoundName = 'gameOver';
-		endSoundName = 'gameOverEnd';
+		deathSoundName = 'system/gameover/fnf_loss_sfx';
+		loopSoundName = 'system/gameover/gameOver';
+		endSoundName = 'system/gameover/gameOverEnd';
 		deathDelay = 0;
 
 		var _song:Dynamic = PlayState.SONG;
@@ -70,6 +71,34 @@ class GameOverSubstate extends MusicBeatSubState
 			if (pBf.confirmDeathSound != null && pBf.confirmDeathSound.trim().length > 0)
 				endSoundName = pBf.confirmDeathSound;
 		}
+	}
+
+	private static function resolveGameOverSound(key:String):openfl.media.Sound
+	{
+		if (key == null || key.trim().length == 0)
+			return null;
+		var snd = Paths.sound(key);
+		if (snd == null && !key.startsWith('system/gameover/'))
+			snd = Paths.sound('system/gameover/' + key);
+		if (snd == null)
+			snd = Paths.music(key);
+		if (snd == null && !key.startsWith('system/gameover/'))
+			snd = Paths.music('system/gameover/' + key);
+		return snd;
+	}
+
+	private static function resolveGameOverMusic(key:String):openfl.media.Sound
+	{
+		if (key == null || key.trim().length == 0)
+			return null;
+		var mus = Paths.music(key);
+		if (mus == null && !key.startsWith('system/gameover/'))
+			mus = Paths.music('system/gameover/' + key);
+		if (mus == null)
+			mus = Paths.sound(key);
+		if (mus == null && !key.startsWith('system/gameover/'))
+			mus = Paths.sound('system/gameover/' + key);
+		return mus;
 	}
 
 	public function new(?playStateBoyfriend:Boyfriend = null)
@@ -110,8 +139,9 @@ class GameOverSubstate extends MusicBeatSubState
 		boyfriend.skipDance = true;
 		add(boyfriend);
 
-		if (deathSoundName != null && deathSoundName.trim().length > 0)
-			FlxG.sound.play(Paths.sound(deathSoundName));
+		var deathSnd = resolveGameOverSound(deathSoundName);
+		if (deathSnd != null)
+			FlxG.sound.play(deathSnd);
 
 		FlxG.camera.scroll.set();
 		FlxG.camera.target = null;
@@ -131,10 +161,11 @@ class GameOverSubstate extends MusicBeatSubState
 	{
 		super.update(elapsed);
 
-		if (boyfriend != null && boyfriend.animation != null && boyfriend.animation.curAnim != null)
+		if (!isEnding && !startedDeathLoop && boyfriend != null)
 		{
-			if (boyfriend.animation.curAnim.name == 'firstDeath' && boyfriend.animation.curAnim.finished)
+			if (boyfriend.getAnimName() == 'deathLoop' || (boyfriend.getAnimName() == 'firstDeath' && boyfriend.isAnimFinished()))
 			{
+				startedDeathLoop = true;
 				boyfriend.playAnim('deathLoop');
 				coolStartDeath();
 			}
@@ -172,7 +203,9 @@ class GameOverSubstate extends MusicBeatSubState
 
 	function coolStartDeath(?volume:Float = 1):Void
 	{
-		FlxG.sound.playMusic(Paths.music(loopSoundName), volume);
+		var loopMus = resolveGameOverMusic(loopSoundName);
+		if (loopMus != null)
+			FlxG.sound.playMusic(loopMus, volume);
 	}
 
 	var isRestarting:Bool = false;
@@ -191,7 +224,9 @@ class GameOverSubstate extends MusicBeatSubState
 			if (FlxG.sound.music != null)
 				FlxG.sound.music.stop();
 
-			FlxG.sound.play(Paths.music(endSoundName));
+			var endSnd = resolveGameOverSound(endSoundName);
+			if (endSnd != null)
+				FlxG.sound.play(endSnd);
 			deathTimer = new FlxTimer().start(0.7, function(tmr:FlxTimer)
 			{
 				deathTimer = null;

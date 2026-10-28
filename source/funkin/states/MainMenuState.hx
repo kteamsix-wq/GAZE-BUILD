@@ -121,6 +121,11 @@ class MainMenuState extends MusicBeatState
 				Main.switchState(this, new ModsMenuState());
 			}
 
+			if (flixel.FlxG.keys.justPressed.SEVEN)
+			{
+				Main.switchState(this, new funkin.editors.CameraEditor());
+			}
+
 			// Wrap around logic
 			if (curSelected < 0)
 				curSelected = optionShit.length - 1;

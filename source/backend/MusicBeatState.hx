@@ -47,7 +47,7 @@ class MusicBeatState extends FunkinState
 
 	override function update(elapsed:Float)
 	{
-		if (!Std.isOfType(this, funkin.states.PlayState) && !Std.isOfType(this, funkin.editors.ChartEditor))
+		if (!Std.isOfType(this, funkin.states.PlayState) && !Std.isOfType(this, funkin.editors.ChartEditor) && !Std.isOfType(this, funkin.editors.CameraEditor))
 		{
 			if (FlxG.sound.music != null && FlxG.sound.music.playing)
 				Conductor.update(elapsed, FlxG.sound.music);
@@ -104,5 +104,20 @@ class MusicBeatState extends FunkinState
 	public function beatHit():Void
 	{
 		// used for updates when beats are hit in classes that extend this one
+	}
+
+	public static function playSong(nameSong:Dynamic, ?songList:Dynamic, ?difficulty:Null<Int>, ?customReturnState:Dynamic):Void
+	{
+		funkin.states.PlayState.playSong(nameSong, songList, difficulty, customReturnState);
+	}
+
+	public static function setReturnState(target:Dynamic):Void
+	{
+		funkin.states.PlayState.setReturnState(target);
+	}
+
+	public static function getReturnState():flixel.FlxState
+	{
+		return funkin.states.PlayState.getReturnState();
 	}
 }

@@ -360,6 +360,14 @@ class ChartEditor extends MusicBeatState
 			loadSong(_song.song);
 		});
 
+		var cameraEditorBtn:FlxButton = new FlxButton(10, 315, "Camera Editor", function()
+		{
+			PlayState.SONG = _song;
+			if (songMusic != null) songMusic.stop();
+			if (vocals != null) vocals.stop();
+			Main.switchState(this, new funkin.editors.CameraEditor());
+		});
+
 		var reloadSongJson:FlxButton = new FlxButton(150, 285, "Reload JSON", function()
 		{
 			loadJson(_song.song.toLowerCase());
@@ -392,6 +400,7 @@ class ChartEditor extends MusicBeatState
 		tab_group_song.add(loadAutosaveBtn);
 		tab_group_song.add(reloadSong);
 		tab_group_song.add(reloadSongJson);
+		tab_group_song.add(cameraEditorBtn);
 
 		// Add dropdowns in reverse vertical order so open menus draw on top!
 		tab_group_song.add(assetModifierDropDown);
@@ -488,10 +497,16 @@ class ChartEditor extends MusicBeatState
 			}
 		});
 
-		check_mustHitSection = new FlxUICheckBox(10, 30, null, null, "Must hit section", 100);
-		check_mustHitSection.name = 'check_mustHit';
-		check_mustHitSection.checked = true;
-		// _song.needsVoices = check_mustHit.checked;
+		var btnSectionCamEditor:FlxButton = new FlxButton(10, 30, "Camera Editor", function()
+		{
+			PlayState.SONG = _song;
+			if (songMusic != null) songMusic.stop();
+			if (vocals != null) vocals.stop();
+			Main.switchState(this, new funkin.editors.CameraEditor());
+		});
+
+		var txtCamInfo:FlxText = new FlxText(100, 34, 180, "Camera: Events", 8);
+		txtCamInfo.color = 0xFFAAAAAA;
 
 		check_altAnim = new FlxUICheckBox(10, 400, null, null, "Alt Animation", 100);
 		check_altAnim.name = 'check_altAnim';
@@ -502,7 +517,8 @@ class ChartEditor extends MusicBeatState
 		tab_group_section.add(stepperLength);
 		tab_group_section.add(stepperSectionBPM);
 		tab_group_section.add(stepperCopy);
-		tab_group_section.add(check_mustHitSection);
+		tab_group_section.add(btnSectionCamEditor);
+		tab_group_section.add(txtCamInfo);
 		tab_group_section.add(check_altAnim);
 		tab_group_section.add(check_changeBPM);
 		tab_group_section.add(copyButton);
@@ -522,7 +538,7 @@ class ChartEditor extends MusicBeatState
 	var eventVal2:FlxInputText;
 	var eventSkinDropdown:FlxUIDropDownMenu;
 	var eventDescText:FlxText;
-	var eventsOptions:Array<String> = ['Change Scroll Speed', 'Change Character', 'Cam Pos To', 'Change Note Skins', 'Play Anim', 'Add Cam Zoom'];
+	var eventsOptions:Array<String> = ['FocusCamera', 'ZoomCamera', 'Change Scroll Speed', 'Change Character', 'Cam Pos To', 'Change Note Skins', 'Play Anim', 'Add Cam Zoom', 'playVideo'];
 
 	function updateEventDesc():Void
 	{
@@ -530,6 +546,10 @@ class ChartEditor extends MusicBeatState
 		var evName:String = eventDropdown != null ? eventDropdown.selectedLabel : '';
 		switch (evName)
 		{
+			case 'FocusCamera':
+				eventDescText.text = "Val 1: Target (0=BF, 1=Dad, 2=GF), x, y\nVal 2: duration (steps), ease (CLASSIC, linear...)";
+			case 'ZoomCamera':
+				eventDescText.text = "Val 1: Zoom value (e.g. 1.05)\nVal 2: duration (steps), ease";
 			case 'Change Character':
 				eventDescText.text = "Val 1: Target (0/bf, 1/dad, 2/gf), x, y\nVal 2: Character JSON";
 			case 'Change Scroll Speed':
@@ -539,9 +559,11 @@ class ChartEditor extends MusicBeatState
 			case 'Change Note Skins':
 				eventDescText.text = "Val 1: Target (0/bf, 1/dad, 2/ambos)\nVal 2: Note Skin";
 			case 'Play Anim':
-				eventDescText.text = "Val 1: Target (0/bf, 1/dad, 2/gf)\nVal 2: anim, lock (optional)";
+				eventDescText.text = "Val 1: Target (0/bf, 1/dad, 2/gf)\nVal 2: anim, lock (optional), ignoreArrows (optional)";
 			case 'Add Cam Zoom' | 'Add Camera Zoom':
 				eventDescText.text = "Val 1: Cam zoom (default: 0.015)\nVal 2: HUD zoom (default: 0.03)";
+			case 'playVideo' | 'Play Video':
+				eventDescText.text = "Val 1: Video name (in videos/)\nVal 2: true (screenCenter), scale";
 			default:
 				eventDescText.text = "";
 		}
@@ -737,13 +759,13 @@ class ChartEditor extends MusicBeatState
 			opponentVocals.stop();
 
 		songMusic = new FlxSound().load(Paths.inst(daSong));
-		songMusic.autoDestroy = true;
+		songMusic.autoDestroy = false;
 
 		vocals = new FlxSound();
-		vocals.autoDestroy = true;
+		vocals.autoDestroy = false;
 
 		opponentVocals = new FlxSound();
-		opponentVocals.autoDestroy = true;
+		opponentVocals.autoDestroy = false;
 
 		if (_song.needsVoices)
 		{
@@ -779,8 +801,8 @@ class ChartEditor extends MusicBeatState
 		}
 
 		FlxG.sound.list.add(songMusic);
-		if (vocals != null) FlxG.sound.list.add(vocals);
-		if (opponentVocals != null) FlxG.sound.list.add(opponentVocals);
+		if (vocals != null && vocals.exists && vocals.length > 0) FlxG.sound.list.add(vocals);
+		if (opponentVocals != null && opponentVocals.exists && opponentVocals.length > 0) FlxG.sound.list.add(opponentVocals);
 
 		songMusic.play();
 		if (vocals != null && vocals.exists && vocals.length > 0) vocals.play();
@@ -1099,16 +1121,18 @@ class ChartEditor extends MusicBeatState
 							pulsingNote = null;
 							
 							// Update UI
-							UI_box.selected_tab = 3;
+							UI_box.selected_tab_id = 'Events';
 							if (curSelectedEvent[1] != null && curSelectedEvent[1].length > 0) {
 								var evData = curSelectedEvent[1][0]; // Take the first event at this time
 								var evName:String = evData[0];
 								eventVal1.text = evData[1];
 								eventVal2.text = evData[2];
 								
+								var normEv:String = evName != null ? StringTools.replace(evName.toLowerCase(), " ", "") : "";
 								for (optIdx in 0...eventsOptions.length) {
-									if (eventsOptions[optIdx] == evName) {
-										eventDropdown.selectedLabel = evName;
+									var opt:String = eventsOptions[optIdx];
+									if (opt == evName || StringTools.replace(opt.toLowerCase(), " ", "") == normEv) {
+										eventDropdown.selectedLabel = opt;
 										eventDropdown.selectedId = Std.string(optIdx);
 										break;
 									}
@@ -1297,7 +1321,7 @@ class ChartEditor extends MusicBeatState
 				if (UI_box.selected_tab >= 4)
 					UI_box.selected_tab = 0;
 			}
-			if (UI_box.selected_tab == 3)
+			if (UI_box.selected_tab_id == 'Events')
 			{
 				updateEventDesc();
 				updateEventValueFields();
@@ -1306,7 +1330,7 @@ class ChartEditor extends MusicBeatState
 
 		if (UI_box != null)
 		{
-			if (UI_box.selected_tab == 3)
+			if (UI_box.selected_tab_id == 'Events')
 			{
 				var evName:String = eventDropdown != null ? eventDropdown.selectedLabel : '';
 				var isSkinEvent:Bool = (evName == 'Change Note Skins');
@@ -1617,7 +1641,8 @@ class ChartEditor extends MusicBeatState
 		var sec = _song.notes[curSection];
 
 		stepperLength.value = sec.lengthInSteps;
-		check_mustHitSection.checked = sec.mustHitSection;
+		if (check_mustHitSection != null)
+			check_mustHitSection.checked = sec.mustHitSection;
 		check_altAnim.checked = sec.altAnim;
 		check_changeBPM.checked = sec.changeBPM;
 		stepperSectionBPM.value = sec.bpm;
@@ -1891,6 +1916,7 @@ class ChartEditor extends MusicBeatState
 				curSelectedEvent = newEv;
 				curSelectedNote = null;
 			}
+			UI_box.selected_tab_id = 'Events';
 			updateGrid();
 			return false; // Cannot drag sustain on events
 		}
