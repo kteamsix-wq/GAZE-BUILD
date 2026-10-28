@@ -1,10 +1,6 @@
-package;
+﻿package;
 
-import backend.*;
-import funkin.objects.*;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
+import editors.*;
 
 import openfl.events.ErrorEvent;
 import openfl.errors.Error;
@@ -24,12 +20,12 @@ import haxe.CallStack.StackItem;
 import haxe.CallStack;
 import haxe.io.Path;
 import lime.app.Application;
-import backend.PlayerSettings;
-import backend.Discord;
-import funkin.objects.FunkinTransition;
-import funkin.objects.FunkinState;
-import funkin.objects.Overlay;
-import Assets;
+import core.input.PlayerSettings;
+import core.system.Discord;
+import core.system.FunkinTransition;
+import core.base.FunkinState;
+import editors.dev.Overlay;
+import core.system.Assets;
 import openfl.Lib;
 import openfl.display.FPS;
 import openfl.display.Sprite;
@@ -89,7 +85,7 @@ class Main extends Sprite
 		var gameCreate:FlxGame = new FlxGame(gameWidth, gameHeight, mainClassState, #if (flixel < "5.0.0") zoom, #end framerate, framerate, skipSplash);
 		addChild(gameCreate);
 
-		backend.FunkinMemory.init();
+		core.system.FunkinMemory.init();
 
 		#if DISCORD_RPC
 		Discord.initializeRPC();
@@ -109,8 +105,8 @@ class Main extends Sprite
 		infoCounter = new Overlay(0, 0);
 		addChild(infoCounter);
 
-		funkin.objects.DevConsole.init();
-		addChild(funkin.objects.DevConsole.instance);
+		editors.dev.DevConsole.init();
+		addChild(editors.dev.DevConsole.instance);
 	}
 
 	public static function switchState(curState:FlxState, target:FlxState)
@@ -122,7 +118,7 @@ class Main extends Sprite
 		// If it's not already a ModState, check if there's a custom script overriding this state
 		if (stateName != "ModState" && stateName != "Init" && stateName != "PreloadState")
 		{
-			var modsList = backend.Mods.getModDirectories();
+			var modsList = core.scripting.Mods.getModDirectories();
 			var foundScript = false;
 			for (mod in modsList)
 			{
@@ -135,7 +131,7 @@ class Main extends Sprite
 			
 			if (foundScript)
 			{
-				target = new backend.ModState(stateName);
+				target = new core.scripting.ModState(stateName);
 			}
 		}
 
@@ -148,8 +144,8 @@ class Main extends Sprite
 				target = null;
 				return inst;
 			}
-			if (mainClassState == backend.ModState)
-				return new backend.ModState(stateName);
+			if (mainClassState == core.scripting.ModState)
+				return new core.scripting.ModState(stateName);
 			return Type.createInstance(mainClassState, []);
 		};
 
