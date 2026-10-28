@@ -1,16 +1,15 @@
-package funkin.substates;
+﻿package gameplay.substates;
 
-import backend.*;
-import backend.MusicBeatSubState;
-import backend.Conductor;
-import funkin.objects.Boyfriend;
-import funkin.objects.Character;
-import funkin.states.PlayState;
-import funkin.states.FreeplayState;
-import funkin.states.MainMenuState;
-import Paths;
-import Utils;
-import Init;
+import core.base.MusicBeatSubState;
+import gameplay.Conductor;
+import gameplay.objects.Boyfriend;
+import gameplay.objects.Character;
+import gameplay.PlayState;
+import menus.FreeplayState;
+import menus.MainMenuState;
+import core.system.Paths;
+import core.utils.Utils;
+import core.base.Init;
 
 import flixel.FlxG;
 import flixel.FlxObject;

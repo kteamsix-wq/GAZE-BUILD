@@ -1,4 +1,4 @@
-package;
+﻿package core.utils;
 
 import flixel.FlxG;
 import flixel.sound.FlxSound;

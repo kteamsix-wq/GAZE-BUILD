@@ -1,4 +1,4 @@
-package funkin.editors;
+﻿package editors;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -20,14 +20,14 @@ import flixel.group.FlxGroup.FlxTypedGroup;
 import openfl.events.Event;
 import openfl.events.IOErrorEvent;
 import openfl.net.FileReference;
-import backend.MusicBeatState;
-import backend.CoolUtil;
-import backend.HealthIcon;
-import funkin.objects.Character;
+import core.base.MusicBeatState;
+import core.utils.CoolUtil;
+import gameplay.hud.HealthIcon;
+import gameplay.objects.Character;
 import haxe.Json;
 import sys.io.File;
 import sys.FileSystem;
-import Paths;
+import core.system.Paths;
 
 using StringTools;
 
@@ -882,7 +882,7 @@ class CharacterEditor extends MusicBeatState
 		
 		if (FlxG.keys.justPressed.ESCAPE)
 		{
-			Main.switchState(this, new funkin.states.PlayState());
+			Main.switchState(this, new gameplay.PlayState());
 			return;
 		}
 

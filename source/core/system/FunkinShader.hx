@@ -1,4 +1,4 @@
-package backend;
+﻿package core.system;
 
 import flixel.addons.display.FlxRuntimeShader;
 import openfl.display.ShaderParameter;
@@ -8,7 +8,7 @@ import flixel.tweens.FlxEase;
 import haxe.ds.ObjectMap;
 import sys.io.File;
 import sys.FileSystem;
-import Paths;
+import core.system.Paths;
 
 /**
  * Sistema de Shader baseado na Codename Engine.
@@ -429,9 +429,9 @@ class FunkinShaderImpl extends FlxRuntimeShader
 		if (!StringTools.endsWith(path, ext)) path += ext;
 		
 		#if sys
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory.length > 0)
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
 		{
-			var modPath = 'mods/' + backend.Mods.currentModDirectory + '/shaders/' + path;
+			var modPath = 'mods/' + core.scripting.Mods.currentModDirectory + '/shaders/' + path;
 			if (FileSystem.exists(modPath)) return modPath;
 		}
 		var globalModPath = 'mods/shaders/' + path;

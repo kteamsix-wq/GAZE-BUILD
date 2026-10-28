@@ -1,4 +1,4 @@
-package funkin.objects;
+﻿package core.system;
 
 import flixel.FlxG;
 import flixel.FlxCamera;

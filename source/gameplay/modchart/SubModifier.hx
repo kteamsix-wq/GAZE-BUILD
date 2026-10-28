@@ -1,4 +1,4 @@
-package funkin.game.modchart;
+﻿package gameplay.modchart;
 
 class SubModifier extends Modifier
 {

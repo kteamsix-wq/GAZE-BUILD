@@ -1,4 +1,4 @@
-package funkin.objects;
+﻿package core.system;
 
 import animate.FlxAnimate;
 import animate.FlxAnimateFrames;
@@ -9,7 +9,7 @@ import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.graphics.frames.FlxTileFrames;
 import flixel.math.FlxPoint;
 import flixel.system.FlxAssets.FlxGraphicAsset;
-import Paths;
+import core.system.Paths;
 
 /**
 	Global FNF sprite utilities, remade with GPU Texture Compression & robust loading!

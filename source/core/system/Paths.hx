@@ -1,4 +1,4 @@
-package;
+﻿package core.system;
 
 #if sys
 import sys.FileSystem;
@@ -18,9 +18,9 @@ import openfl.utils.Assets as OpenFlAssets;
 import lime.utils.Assets as LimeAssets;
 #end
 
-import backend.CoolUtil;
-import backend.FunkinMemory;
-import backend.FunkinShader;
+import core.utils.CoolUtil;
+import core.system.FunkinMemory;
+import core.system.FunkinShader;
 
 using StringTools;
 
@@ -434,7 +434,7 @@ class Paths
 	{
 		if (file == null) return "";
 
-		var modDir:String = #if sys (backend.Mods.currentModDirectory != null ? backend.Mods.currentModDirectory : "") #else "" #end;
+		var modDir:String = #if sys (core.scripting.Mods.currentModDirectory != null ? core.scripting.Mods.currentModDirectory : "") #else "" #end;
 		var cacheKey:String = (library != null ? library : "") + "|" + modDir + "|" + file;
 
 		if (tempPathsCache.exists(cacheKey))
@@ -1006,10 +1006,10 @@ class Paths
 		var audio:String = 'songs/$folder/audio/$fileName.$SOUND_EXT';
 
 		#if sys
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory.length > 0)
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
 		{
-			if (FileSystem.exists('mods/' + backend.Mods.currentModDirectory + '/' + direct)
-				|| FileSystem.exists('mods/' + backend.Mods.currentModDirectory + '/' + audio))
+			if (FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + direct)
+				|| FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + audio))
 				return true;
 		}
 		if (FileSystem.exists('mods/' + direct) || FileSystem.exists('mods/' + audio))
@@ -1125,9 +1125,9 @@ class Paths
 		// 1. Direct song path: songs/$folder/$fileName.ogg
 		var checkDirect:String = 'songs/$folder/$fileName.$SOUND_EXT';
 		#if sys
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory.length > 0)
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
 		{
-			if (FileSystem.exists('mods/' + backend.Mods.currentModDirectory + '/' + checkDirect))
+			if (FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + checkDirect))
 				return '$folder/$fileName';
 		}
 		if (FileSystem.exists('mods/' + checkDirect))
@@ -1139,9 +1139,9 @@ class Paths
 		// 2. Subfolder path: songs/$folder/audio/$fileName.ogg
 		var checkAudio:String = 'songs/$folder/audio/$fileName.$SOUND_EXT';
 		#if sys
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory.length > 0)
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
 		{
-			if (FileSystem.exists('mods/' + backend.Mods.currentModDirectory + '/' + checkAudio))
+			if (FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + checkAudio))
 				return '$folder/audio/$fileName';
 		}
 		if (FileSystem.exists('mods/' + checkAudio))
@@ -1337,7 +1337,7 @@ class Paths
 
 		if (!FileSystem.exists(gottenPath))
 		{
-			for (mod in backend.Mods.getModDirectories())
+			for (mod in core.scripting.Mods.getModDirectories())
 			{
 				var candidate:String = 'mods/$mod/videos/$cleanKey.$VIDEO_EXT';
 				if (FileSystem.exists(candidate))

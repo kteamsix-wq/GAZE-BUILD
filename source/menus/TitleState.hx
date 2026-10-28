@@ -1,4 +1,4 @@
-package funkin.states;
+﻿package menus;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -12,15 +12,15 @@ import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import lime.app.Application;
 
-import backend.MusicBeatState;
-import backend.Conductor;
-import Paths;
-import Utils;
-import funkin.objects.Alphabet;
+import core.base.MusicBeatState;
+import gameplay.Conductor;
+import core.system.Paths;
+import core.utils.Utils;
+import menus.objects.Alphabet;
 import openfl.Assets;
 
 #if desktop
-import backend.Discord;
+import core.system.Discord;
 #end
 
 /**

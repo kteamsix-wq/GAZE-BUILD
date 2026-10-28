@@ -1,14 +1,11 @@
-package funkin.objects;
-
-import backend.*;
-import funkin.objects.*;
-import Paths;
-import Utils;
-import Assets;
+﻿package gameplay.objects;
+import core.system.Paths;
+import core.utils.Utils;
+import core.system.Assets;
 
 import flixel.FlxG;
 import flixel.graphics.frames.FlxAtlasFrames;
-import funkin.objects.FunkinSprites;
+import core.system.FunkinSprites;
 import openfl.utils.Assets as OpenFlAssets;
 
 using StringTools;

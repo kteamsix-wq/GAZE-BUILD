@@ -1,6 +1,6 @@
-package funkin.game.modchart;
+﻿package gameplay.modchart;
 
-import funkin.game.modchart.Modifier.ModifierType;
+import gameplay.modchart.Modifier.ModifierType;
 
 class NoteModifier extends Modifier
 {

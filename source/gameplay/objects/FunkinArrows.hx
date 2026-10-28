@@ -1,9 +1,8 @@
-package funkin.objects;
-import Assets;
-import backend.*;
-import backend.Conductor;
-import backend.Section.SwagSection;
-import backend.Timings;
+﻿package gameplay.objects;
+import core.system.Assets;
+import gameplay.Conductor;
+import gameplay.chart.Section.SwagSection;
+import gameplay.Timings;
 import flixel.FlxBasic;
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -16,18 +15,15 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxSort;
-import funkin.editors.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.objects.FunkinSprites;
-import funkin.objects.FunkinArrows.UIStaticArrow;
-import funkin.objects.FunkinArrows.Strumline;
-import funkin.states.*;
-import funkin.states.PlayState;
-import funkin.substates.*;
-import Init;
-import Paths;
-import Utils;
+import editors.*;
+import gameplay.objects.FunkinArrows;
+import core.system.FunkinSprites;
+import gameplay.objects.FunkinArrows.UIStaticArrow;
+import gameplay.objects.FunkinArrows.Strumline;
+import gameplay.PlayState;
+import core.base.Init;
+import core.system.Paths;
+import core.utils.Utils;
 
 using StringTools;
 
@@ -45,8 +41,8 @@ class FunkinArrows
 
 		#if sys
 		var searchDirs:Array<String> = ['assets/images/UI/notes'];
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory.length > 0)
-			searchDirs.push('mods/' + backend.Mods.currentModDirectory + '/images/UI/notes');
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
+			searchDirs.push('mods/' + core.scripting.Mods.currentModDirectory + '/images/UI/notes');
 
 		for (dir in searchDirs)
 		{

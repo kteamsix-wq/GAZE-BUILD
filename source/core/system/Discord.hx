@@ -1,4 +1,4 @@
-package backend;
+﻿package core.system;
 
 #if DISCORD_RPC
 import hxdiscord_rpc.Discord as DiscordRpc;

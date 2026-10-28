@@ -1,4 +1,4 @@
-package funkin.editors.camera;
+﻿package editors.camera;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -10,12 +10,12 @@ import flixel.math.FlxRect;
 import flixel.util.FlxColor;
 import flixel.tweens.FlxEase;
 import flixel.addons.display.FlxSliceSprite;
-import backend.Conductor;
-import backend.CoolUtil;
-import funkin.objects.Character;
-import funkin.objects.Boyfriend;
-import funkin.objects.Stage;
-import Paths;
+import gameplay.Conductor;
+import core.utils.CoolUtil;
+import gameplay.objects.Character;
+import gameplay.objects.Boyfriend;
+import gameplay.objects.Stage;
+import core.system.Paths;
 
 using StringTools;
 

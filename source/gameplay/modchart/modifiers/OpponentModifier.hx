@@ -1,9 +1,9 @@
-package funkin.game.modchart.modifiers;
+﻿package gameplay.modchart.modifiers;
 
 import flixel.FlxSprite;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.NoteModifier;
-import funkin.utils.MathUtil;
+import core.utils.Vector3;
+import gameplay.modchart.NoteModifier;
+import core.utils.MathUtil;
 
 class OpponentModifier extends NoteModifier
 {

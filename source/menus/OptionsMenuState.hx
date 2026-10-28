@@ -1,10 +1,8 @@
-package funkin.states;
-
-import backend.*;
-import Paths;
-import Utils;
-import Init;
-import funkin.substates.OptionsSubstate;
+﻿package menus;
+import core.system.Paths;
+import core.utils.Utils;
+import core.base.Init;
+import menus.OptionsSubstate;
 
 import flixel.FlxG;
 import flixel.FlxSprite;

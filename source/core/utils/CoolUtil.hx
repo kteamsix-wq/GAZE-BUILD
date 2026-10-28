@@ -1,16 +1,11 @@
-package backend;
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Init;
-
-import Assets;
-import funkin.states.PlayState;
+﻿package core.utils;
+import gameplay.objects.FunkinArrows;
+import editors.*;
+import core.system.Paths;
+import core.utils.Utils;
+import core.base.Init;
+import core.system.Assets;
+import gameplay.PlayState;
 import flixel.FlxSprite;
 import flixel.math.FlxRect;
 
@@ -122,8 +117,8 @@ class CoolUtil
 
 		#if sys
 		var directories:Array<String> = ['assets/data/char'];
-		if (backend.Mods.currentModDirectory != null) {
-			directories.push('mods/' + backend.Mods.currentModDirectory + '/data/char');
+		if (core.scripting.Mods.currentModDirectory != null) {
+			directories.push('mods/' + core.scripting.Mods.currentModDirectory + '/data/char');
 		}
 
 		for (path in directories) {
@@ -152,8 +147,8 @@ class CoolUtil
 
 		#if sys
 		var directories:Array<String> = ['assets/data/stages'];
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory.length > 0) {
-			directories.push('mods/' + backend.Mods.currentModDirectory + '/data/stages');
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0) {
+			directories.push('mods/' + core.scripting.Mods.currentModDirectory + '/data/stages');
 		}
 
 		for (path in directories) {

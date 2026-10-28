@@ -1,8 +1,8 @@
-package funkin.game.modchart.modifiers;
+﻿package gameplay.modchart.modifiers;
 
 import flixel.FlxSprite;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.NoteModifier;
+import core.utils.Vector3;
+import gameplay.modchart.NoteModifier;
 
 class TransformModifier extends NoteModifier
 {

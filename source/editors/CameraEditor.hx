@@ -1,4 +1,4 @@
-package funkin.editors;
+﻿package editors;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -32,19 +32,19 @@ import sys.io.File;
 import haxe.io.Path;
 #end
 
-import backend.MusicBeatState;
-import backend.Conductor;
-import backend.CoolUtil;
-import backend.Song;
-import backend.Section.SwagSection;
-import funkin.objects.Boyfriend;
-import funkin.objects.Character;
-import funkin.objects.Stage;
-import funkin.states.PlayState;
-import funkin.states.MainMenuState;
-import funkin.editors.camera.CameraEditorEvent;
-import funkin.editors.camera.VirtualCameraRectangle;
-import Paths;
+import core.base.MusicBeatState;
+import gameplay.Conductor;
+import core.utils.CoolUtil;
+import gameplay.chart.Song;
+import gameplay.chart.Section.SwagSection;
+import gameplay.objects.Boyfriend;
+import gameplay.objects.Character;
+import gameplay.objects.Stage;
+import gameplay.PlayState;
+import menus.MainMenuState;
+import editors.camera.CameraEditorEvent;
+import editors.camera.VirtualCameraRectangle;
+import core.system.Paths;
 
 using StringTools;
 
@@ -261,7 +261,7 @@ class CameraEditor extends MusicBeatState
 
 		#if sys
 		var songFolder = _song.song.toLowerCase().trim();
-		loadedChartPath = backend.ChartConverter.findChartPath(songFolder, songFolder);
+		loadedChartPath = gameplay.chart.ChartConverter.findChartPath(songFolder, songFolder);
 		#end
 
 		if (_song.stage == null || _song.stage.trim() == "")
@@ -1879,7 +1879,7 @@ class CameraEditor extends MusicBeatState
 
 		if (targetPath == null || !FileSystem.exists(targetPath))
 		{
-			var curMod = backend.Mods.currentModDirectory;
+			var curMod = core.scripting.Mods.currentModDirectory;
 			var candidates:Array<String> = [];
 
 			if (curMod != null && curMod.length > 0)

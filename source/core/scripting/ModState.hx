@@ -1,9 +1,9 @@
-package backend;
+﻿package core.scripting;
 
-import backend.MusicBeatState;
-import backend.HScriptHandler;
-import backend.Mods;
-import Paths;
+import core.base.MusicBeatState;
+import core.scripting.HScriptHandler;
+import core.scripting.Mods;
+import core.system.Paths;
 import flixel.FlxG;
 import flixel.FlxState;
 
@@ -31,7 +31,7 @@ class ModState extends MusicBeatState
 			if (sys.FileSystem.exists(path))
 			{
 				scriptPath = path;
-				backend.Mods.currentModDirectory = mod;
+				core.scripting.Mods.currentModDirectory = mod;
 				break;
 			}
 		}
@@ -49,16 +49,16 @@ class ModState extends MusicBeatState
 			script.setVar('controls', controls);
 			
 			// Inject additional state-switching capabilities for ModState scripts
-			script.setVar('ModState', backend.ModState);
-			script.setVar('MainMenuState', funkin.states.MainMenuState);
-			script.setVar('TitleState', funkin.states.TitleState);
-			script.setVar('FreeplayState', funkin.states.FreeplayState);
-			script.setVar('OptionsMenuState', funkin.states.OptionsMenuState);
-			script.setVar('OptionsState', funkin.states.OptionsMenuState);
-			script.setVar('CreditsState', funkin.states.CreditsState);
-			script.setVar('ModsMenuState', funkin.states.ModsMenuState);
-			script.setVar('StoryMenuState', funkin.states.ModsMenuState);
-			script.setVar('CollectionRoomState', funkin.states.ModsMenuState);
+			script.setVar('ModState', core.scripting.ModState);
+			script.setVar('MainMenuState', menus.MainMenuState);
+			script.setVar('TitleState', menus.TitleState);
+			script.setVar('FreeplayState', menus.FreeplayState);
+			script.setVar('OptionsMenuState', menus.OptionsMenuState);
+			script.setVar('OptionsState', menus.OptionsMenuState);
+			script.setVar('CreditsState', menus.CreditsState);
+			script.setVar('ModsMenuState', menus.ModsMenuState);
+			script.setVar('StoryMenuState', menus.ModsMenuState);
+			script.setVar('CollectionRoomState', menus.ModsMenuState);
             
 			script.setVar('add', function(obj:flixel.FlxBasic) { this.add(obj); });
 			script.setVar('insert', function(pos:Int, obj:flixel.FlxBasic) { this.insert(pos, obj); });
@@ -70,13 +70,13 @@ class ModState extends MusicBeatState
 			});
 			script.setVar('playSong', function(nameSong:Dynamic, ?songList:Dynamic, ?difficulty:Null<Int>, ?customReturnState:Dynamic) {
 				var retTarget:Dynamic = customReturnState != null ? customReturnState : this.stateName;
-				funkin.states.PlayState.playSong(nameSong, songList, difficulty, retTarget);
+				gameplay.PlayState.playSong(nameSong, songList, difficulty, retTarget);
 			});
 			script.setVar('setReturnState', function(target:Dynamic) {
-				funkin.states.PlayState.setReturnState(target);
+				gameplay.PlayState.setReturnState(target);
 			});
 			script.setVar('getReturnState', function() {
-				return funkin.states.PlayState.getReturnState();
+				return gameplay.PlayState.getReturnState();
 			});
 			
 			script.call('create');

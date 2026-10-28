@@ -1,6 +1,8 @@
-import backend.Highscore;
-import funkin.objects.Overlay;
-import funkin.states.TitleState;
+﻿package core.base;
+
+import core.save.Highscore;
+import editors.dev.Overlay;
+import menus.TitleState;
 import flixel.FlxG;
 import flixel.FlxState;
 import flixel.graphics.FlxGraphic;
@@ -82,7 +84,7 @@ class Init extends FlxState
 	override public function create():Void
 	{
 		FlxG.save.bind('funkin', 'ninjamuffin99');
-		backend.Mods.loadModDirectory();
+		core.scripting.Mods.loadModDirectory();
 		Highscore.load();
 
 		loadSettings();
@@ -97,7 +99,7 @@ class Init extends FlxState
 		FlxG.mouse.visible = false; // Hide mouse on startup
 		FlxGraphic.defaultPersist = true; // Manually handle memory for graphics
 
-		backend.FunkinMemory.initialCache();
+		core.system.FunkinMemory.initialCache();
 		Main.switchState(this, new TitleState());
 	}
 

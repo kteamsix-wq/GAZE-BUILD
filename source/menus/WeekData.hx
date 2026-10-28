@@ -1,4 +1,4 @@
-package backend;
+﻿package menus;
 
 import flixel.util.FlxColor;
 import haxe.Json;
@@ -45,8 +45,8 @@ class WeekData
 
 		#if sys
 		var directories:Array<String> = ['assets/data/weeks'];
-		if (backend.Mods.currentModDirectory != null) {
-			directories.push('mods/' + backend.Mods.currentModDirectory + '/data/weeks');
+		if (core.scripting.Mods.currentModDirectory != null) {
+			directories.push('mods/' + core.scripting.Mods.currentModDirectory + '/data/weeks');
 		}
 
 		for (directory in directories) {

@@ -1,4 +1,4 @@
-package funkin.play;
+﻿package gameplay;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -6,10 +6,10 @@ import flixel.sound.FlxSound;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxTimer;
-import Paths;
-import backend.Conductor;
-import Init;
-import funkin.states.PlayState;
+import core.system.Paths;
+import gameplay.Conductor;
+import core.base.Init;
+import gameplay.PlayState;
 import sys.FileSystem;
 
 using StringTools;

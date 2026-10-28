@@ -1,10 +1,6 @@
-package funkin.substates;
-
-import backend.*;
-import funkin.objects.*;
-import funkin.states.*;
-import Paths;
-import Init;
+﻿package gameplay.substates;
+import core.system.Paths;
+import core.base.Init;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -14,8 +10,8 @@ import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
-import backend.MusicBeatSubState;
-import funkin.objects.Alphabet;
+import core.base.MusicBeatSubState;
+import menus.objects.Alphabet;
 
 class PauseSubState extends MusicBeatSubState
 {

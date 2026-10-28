@@ -1,6 +1,5 @@
-package funkin.game.modchart;
-
-import Init;
+﻿package core.save;
+import core.base.Init;
 
 class ClientPrefs
 {

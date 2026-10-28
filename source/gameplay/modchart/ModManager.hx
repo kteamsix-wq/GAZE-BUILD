@@ -1,18 +1,18 @@
-// NightmareVision modchart system implementation for GAZE BUILD / K-Slice Engine
-package funkin.game.modchart;
+﻿// NightmareVision modchart system implementation for GAZE BUILD / K-Slice Engine
+package gameplay.modchart;
 
 import flixel.FlxSprite;
 import flixel.FlxG;
 import flixel.util.FlxDestroyUtil;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
 
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.modifiers.*;
-import funkin.game.modchart.events.*;
-import funkin.objects.FunkinArrows.Note;
-import funkin.objects.FunkinArrows.UIStaticArrow;
-import funkin.states.PlayState;
-import backend.CoolUtil;
+import core.utils.Vector3;
+import gameplay.modchart.modifiers.*;
+import gameplay.modchart.events.*;
+import gameplay.objects.FunkinArrows.Note;
+import gameplay.objects.FunkinArrows.UIStaticArrow;
+import gameplay.PlayState;
+import core.utils.CoolUtil;
 import sys.FileSystem;
 using StringTools;
 
@@ -58,9 +58,9 @@ class ModManager implements IFlxDestroyable
 	public function registerScriptedModifiers()
 	{
 		var dirs:Array<String> = ['assets/scripts/modifiers'];
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory != '')
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory != '')
 		{
-			dirs.unshift('mods/' + backend.Mods.currentModDirectory + '/scripts/modifiers');
+			dirs.unshift('mods/' + core.scripting.Mods.currentModDirectory + '/scripts/modifiers');
 		}
 
 		for (dir in dirs)

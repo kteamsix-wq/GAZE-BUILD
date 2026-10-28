@@ -1,7 +1,6 @@
-package funkin.objects;
+﻿package core.base;
 
-import backend.*;
-import funkin.objects.FunkinTransition;
+import core.system.FunkinTransition;
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.addons.ui.FlxUIState;
 

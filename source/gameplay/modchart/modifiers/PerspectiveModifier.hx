@@ -1,12 +1,12 @@
-package funkin.game.modchart.modifiers;
+﻿package gameplay.modchart.modifiers;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.math.FlxMath;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.NoteModifier;
-import funkin.game.modchart.Modifier.ModifierOrder;
-import funkin.utils.MathUtil;
+import core.utils.Vector3;
+import gameplay.modchart.NoteModifier;
+import gameplay.modchart.Modifier.ModifierOrder;
+import core.utils.MathUtil;
 
 class PerspectiveModifier extends NoteModifier
 {

@@ -1,4 +1,4 @@
-package funkin.backend.math;
+﻿package core.utils;
 
 import flixel.util.FlxPool;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;

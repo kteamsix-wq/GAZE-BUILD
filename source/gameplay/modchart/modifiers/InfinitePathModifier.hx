@@ -1,9 +1,9 @@
-package funkin.game.modchart.modifiers;
+﻿package gameplay.modchart.modifiers;
 
 import flixel.FlxG;
 import flixel.math.FlxMath;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.Modifier;
+import core.utils.Vector3;
+import gameplay.modchart.Modifier;
 
 class InfinitePathModifier extends PathModifier
 {

@@ -1,4 +1,4 @@
-package funkin.game.modchart.events;
+﻿package gameplay.modchart.events;
 
 import flixel.tweens.FlxEase.EaseFunction;
 

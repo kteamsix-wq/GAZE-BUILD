@@ -1,12 +1,12 @@
-package funkin.game.modchart.modifiers;
+﻿package gameplay.modchart.modifiers;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.NoteModifier;
-import funkin.game.modchart.ClientPrefs;
-import funkin.utils.MathUtil;
-import funkin.objects.FunkinArrows.Note;
+import core.utils.Vector3;
+import gameplay.modchart.NoteModifier;
+import core.save.ClientPrefs;
+import core.utils.MathUtil;
+import gameplay.objects.FunkinArrows.Note;
 
 class ReverseModifier extends NoteModifier
 {

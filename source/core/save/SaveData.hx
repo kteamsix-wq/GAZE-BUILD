@@ -1,4 +1,4 @@
-package save;
+﻿package core.save;
 
 class SaveData {
     public var version:Int = 1;

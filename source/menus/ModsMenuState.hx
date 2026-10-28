@@ -1,13 +1,13 @@
-package funkin.states;
+﻿package menus;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.group.FlxGroup.FlxTypedGroup;
-import backend.MusicBeatState;
-import backend.Mods;
-import Paths;
+import core.base.MusicBeatState;
+import core.scripting.Mods;
+import core.system.Paths;
 import sys.FileSystem;
 import sys.io.File;
 import haxe.Json;

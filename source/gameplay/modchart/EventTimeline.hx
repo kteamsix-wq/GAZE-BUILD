@@ -1,7 +1,7 @@
-package funkin.game.modchart;
+﻿package gameplay.modchart;
 
-import funkin.game.modchart.events.ModEvent;
-import funkin.game.modchart.events.BaseEvent;
+import gameplay.modchart.events.ModEvent;
+import gameplay.modchart.events.BaseEvent;
 
 class EventTimeline
 {

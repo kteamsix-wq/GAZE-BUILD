@@ -1,4 +1,4 @@
-package funkin.editors.camera;
+﻿package editors.camera;
 
 import haxe.Json;
 

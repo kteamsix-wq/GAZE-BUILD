@@ -1,6 +1,6 @@
-import funkin.objects.FunkinArrows.Note;
-import funkin.objects.FunkinArrows.UIStaticArrow;
-import funkin.objects.FunkinArrows.NoteSplash;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.Modifier;
-import funkin.game.modchart.NoteModifier;
+import gameplay.objects.FunkinArrows.Note;
+import gameplay.objects.FunkinArrows.UIStaticArrow;
+import gameplay.objects.FunkinArrows.NoteSplash;
+import core.utils.Vector3;
+import gameplay.modchart.Modifier;
+import gameplay.modchart.NoteModifier;

@@ -1,4 +1,4 @@
-package funkin.objects;
+﻿package editors.dev;
 
 import openfl.display.Sprite;
 import openfl.display.Shape;
@@ -13,12 +13,12 @@ import openfl.Lib;
 import haxe.Timer;
 import flixel.FlxG;
 import flixel.FlxState;
-import backend.FunkinMemory;
-import backend.CoolUtil;
-import backend.Conductor;
-import backend.HScriptHandler.CustomInterp;
+import core.system.FunkinMemory;
+import core.utils.CoolUtil;
+import gameplay.Conductor;
+import core.scripting.HScriptHandler.CustomInterp;
 import hscript.Parser;
-import Paths;
+import core.system.Paths;
 import Main;
 
 /**
@@ -664,12 +664,12 @@ class DevConsole extends Sprite
 	function setupInterpGlobals():Void
 	{
 		interp.variables.set("FlxG", flixel.FlxG);
-		interp.variables.set("PlayState", funkin.states.PlayState);
-		interp.variables.set("Conductor", backend.Conductor);
-		interp.variables.set("conductor", backend.Conductor);
+		interp.variables.set("PlayState", gameplay.PlayState);
+		interp.variables.set("Conductor", gameplay.Conductor);
+		interp.variables.set("conductor", gameplay.Conductor);
 		interp.variables.set("Paths", Paths);
-		interp.variables.set("CoolUtil", backend.CoolUtil);
-		interp.variables.set("FunkinMemory", backend.FunkinMemory);
+		interp.variables.set("CoolUtil", core.utils.CoolUtil);
+		interp.variables.set("FunkinMemory", core.system.FunkinMemory);
 		interp.variables.set("Main", Main);
 		interp.variables.set("Math", Math);
 		interp.variables.set("Std", Std);
@@ -757,7 +757,7 @@ class DevConsole extends Sprite
 				log('Loading song "${song}" on difficulty ${diffIdx}...', INFO);
 				try
 				{
-					funkin.states.PlayState.playSong(song, null, diffIdx);
+					gameplay.PlayState.playSong(song, null, diffIdx);
 				}
 				catch (e:Dynamic)
 				{
@@ -766,21 +766,21 @@ class DevConsole extends Sprite
 
 			case "chart":
 				log("Opening Chart Editor...", INFO);
-				Main.switchState(FlxG.state, new funkin.editors.ChartEditor());
+				Main.switchState(FlxG.state, new editors.ChartEditor());
 
 			case "char" | "character":
 				log("Opening Character Editor...", INFO);
-				Main.switchState(FlxG.state, new funkin.editors.CharacterEditor());
+				Main.switchState(FlxG.state, new editors.CharacterEditor());
 
 			case "cam" | "camera":
 				log("Opening Camera Editor...", INFO);
-				Main.switchState(FlxG.state, new funkin.editors.CameraEditor());
+				Main.switchState(FlxG.state, new editors.CameraEditor());
 
 			case "botplay":
-				if (funkin.states.PlayState.boyfriendStrums != null)
+				if (gameplay.PlayState.boyfriendStrums != null)
 				{
-					var enable = (args.length > 0) ? (args[0] == "1" || args[0] == "true" || args[0] == "on") : !funkin.states.PlayState.boyfriendStrums.autoplay;
-					funkin.states.PlayState.boyfriendStrums.autoplay = enable;
+					var enable = (args.length > 0) ? (args[0] == "1" || args[0] == "true" || args[0] == "on") : !gameplay.PlayState.boyfriendStrums.autoplay;
+					gameplay.PlayState.boyfriendStrums.autoplay = enable;
 					log('Botplay ' + (enable ? 'ENABLED' : 'DISABLED'), INFO);
 				}
 				else
@@ -791,7 +791,7 @@ class DevConsole extends Sprite
 			case "health" | "hp":
 				if (args.length == 0)
 				{
-					log('Current health: ' + funkin.states.PlayState.health, INFO);
+					log('Current health: ' + gameplay.PlayState.health, INFO);
 				}
 				else
 				{
@@ -800,15 +800,15 @@ class DevConsole extends Sprite
 						log("Invalid health value! Use a number (0.0 to 2.0)", ERROR);
 					else
 					{
-						funkin.states.PlayState.health = Math.max(0, Math.min(val, 2.0));
-						log('Health set to: ' + funkin.states.PlayState.health, INFO);
+						gameplay.PlayState.health = Math.max(0, Math.min(val, 2.0));
+						log('Health set to: ' + gameplay.PlayState.health, INFO);
 					}
 				}
 
 			case "score":
 				if (args.length == 0)
 				{
-					log('Current score: ' + funkin.states.PlayState.songScore, INFO);
+					log('Current score: ' + gameplay.PlayState.songScore, INFO);
 				}
 				else
 				{
@@ -816,7 +816,7 @@ class DevConsole extends Sprite
 					if (sc == null) log("Invalid score integer!", ERROR);
 					else
 					{
-						funkin.states.PlayState.songScore = sc;
+						gameplay.PlayState.songScore = sc;
 						log('Score set to: ' + sc, INFO);
 					}
 				}
@@ -824,7 +824,7 @@ class DevConsole extends Sprite
 			case "misses":
 				if (args.length == 0)
 				{
-					log('Current misses: ' + funkin.states.PlayState.misses, INFO);
+					log('Current misses: ' + gameplay.PlayState.misses, INFO);
 				}
 				else
 				{
@@ -832,15 +832,15 @@ class DevConsole extends Sprite
 					if (ms == null) log("Invalid misses integer!", ERROR);
 					else
 					{
-						funkin.states.PlayState.misses = ms;
+						gameplay.PlayState.misses = ms;
 						log('Misses set to: ' + ms, INFO);
 					}
 				}
 
 			case "kill" | "die":
-				if (funkin.states.PlayState.instance != null)
+				if (gameplay.PlayState.instance != null)
 				{
-					funkin.states.PlayState.health = 0;
+					gameplay.PlayState.health = 0;
 					log("Player killed!", WARN);
 				}
 				else
@@ -939,29 +939,29 @@ class DevConsole extends Sprite
 		switch (cleanName)
 		{
 			case "playstate" | "play":
-				targetState = new funkin.states.PlayState();
+				targetState = new gameplay.PlayState();
 			case "titlestate" | "title":
-				targetState = new funkin.states.TitleState();
+				targetState = new menus.TitleState();
 			case "mainmenustate" | "mainmenu" | "menu":
-				targetState = new funkin.states.MainMenuState();
+				targetState = new menus.MainMenuState();
 			case "freeplaystate" | "freeplay":
-				targetState = new funkin.states.FreeplayState();
+				targetState = new menus.FreeplayState();
 			case "optionsmenustate" | "options":
-				targetState = new funkin.states.OptionsMenuState();
+				targetState = new menus.OptionsMenuState();
 			case "creditsstate" | "credits":
-				targetState = new funkin.states.CreditsState();
+				targetState = new menus.CreditsState();
 			case "modsmenustate" | "mods":
-				targetState = new funkin.states.ModsMenuState();
+				targetState = new menus.ModsMenuState();
 			case "charteditor" | "chart":
-				targetState = new funkin.editors.ChartEditor();
+				targetState = new editors.ChartEditor();
 			case "charactereditor" | "chareditor" | "char":
-				targetState = new funkin.editors.CharacterEditor();
+				targetState = new editors.CharacterEditor();
 			case "cameraeditor" | "cam":
-				targetState = new funkin.editors.CameraEditor();
+				targetState = new editors.CameraEditor();
 			default:
 				var resolved = Type.resolveClass(name);
 				if (resolved == null) resolved = Type.resolveClass("funkin.states." + name);
-				if (resolved == null) resolved = Type.resolveClass("funkin.editors." + name);
+				if (resolved == null) resolved = Type.resolveClass("editors." + name);
 				if (resolved != null)
 				{
 					try {
@@ -989,8 +989,8 @@ class DevConsole extends Sprite
 		{
 			interp.variables.set("game", FlxG.state);
 			interp.variables.set("state", FlxG.state);
-			interp.variables.set("instance", funkin.states.PlayState.instance);
-			interp.variables.set("playstate", funkin.states.PlayState.instance);
+			interp.variables.set("instance", gameplay.PlayState.instance);
+			interp.variables.set("playstate", gameplay.PlayState.instance);
 
 			var expr = parser.parseString(code);
 			var res:Dynamic = interp.execute(expr);

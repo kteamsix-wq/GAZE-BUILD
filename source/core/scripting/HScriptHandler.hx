@@ -1,4 +1,4 @@
-package backend;
+package core.scripting;
 
 import hscript.Parser;
 import hscript.Interp;
@@ -12,8 +12,8 @@ import flixel.util.FlxTimer;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.util.FlxColor;
-import funkin.states.PlayState;
-import funkin.objects.Character;
+import gameplay.PlayState;
+import gameplay.objects.Character;
 
 class CustomInterp extends hscript.Interp {
 	override public function set(o:Dynamic, f:String, v:Dynamic):Dynamic {
@@ -39,7 +39,7 @@ class CustomInterp extends hscript.Interp {
 				case "camAlt": PlayState.camAlt = v; return v;
 			}
 		}
-		if (Std.isOfType(o, backend.FunkinShader.FunkinShaderImpl) || Std.isOfType(o, flixel.addons.display.FlxRuntimeShader)) {
+		if (Std.isOfType(o, core.system.FunkinShader.FunkinShaderImpl) || Std.isOfType(o, flixel.addons.display.FlxRuntimeShader)) {
 			var shader:flixel.addons.display.FlxRuntimeShader = cast o;
 			if (shader.data != null) {
 				var prop:Dynamic = Reflect.field(shader.data, f);
@@ -108,7 +108,7 @@ class CustomInterp extends hscript.Interp {
 		if (Std.isOfType(o, flixel.sound.FlxSound) && f == "fadeIn") {
 			return function(dur:Float, from:Float=0.0, to:Float=1.0) { cast(o, flixel.sound.FlxSound).fadeIn(dur, from, to); };
 		}
-		if (Std.isOfType(o, backend.FunkinShader.FunkinShaderImpl) || Std.isOfType(o, flixel.addons.display.FlxRuntimeShader)) {
+		if (Std.isOfType(o, core.system.FunkinShader.FunkinShaderImpl) || Std.isOfType(o, flixel.addons.display.FlxRuntimeShader)) {
 			var shader:flixel.addons.display.FlxRuntimeShader = cast o;
 			if (shader.data != null) {
 				var prop:Dynamic = Reflect.field(shader.data, f);
@@ -398,12 +398,12 @@ class HScriptHandler {
 
 	public static function getCountdownStepProxy():Dynamic {
 		return {
-			BEFORE: funkin.play.Countdown.CountdownStep.BEFORE,
-			THREE: funkin.play.Countdown.CountdownStep.THREE,
-			TWO: funkin.play.Countdown.CountdownStep.TWO,
-			ONE: funkin.play.Countdown.CountdownStep.ONE,
-			GO: funkin.play.Countdown.CountdownStep.GO,
-			AFTER: funkin.play.Countdown.CountdownStep.AFTER
+			BEFORE: gameplay.Countdown.CountdownStep.BEFORE,
+			THREE: gameplay.Countdown.CountdownStep.THREE,
+			TWO: gameplay.Countdown.CountdownStep.TWO,
+			ONE: gameplay.Countdown.CountdownStep.ONE,
+			GO: gameplay.Countdown.CountdownStep.GO,
+			AFTER: gameplay.Countdown.CountdownStep.AFTER
 		};
 	}
 
@@ -459,9 +459,9 @@ class HScriptHandler {
 				return flixel.effects.particles.FlxEmitter.FlxTypedEmitter;
 			case "openfl.display.BlendMode" | "BlendMode":
 				return getBlendModeProxy();
-			case "backend.FunkinShader" | "FunkinShader":
-				return backend.FunkinShader.FunkinShaderImpl;
-			case "funkin.play.Countdown.CountdownStep" | "funkin.play.CountdownStep" | "CountdownStep":
+			case "backend.FunkinShader" | "core.system.FunkinShader" | "FunkinShader":
+				return core.system.FunkinShader.FunkinShaderImpl;
+			case "funkin.play.Countdown.CountdownStep" | "funkin.play.CountdownStep" | "gameplay.Countdown.CountdownStep" | "gameplay.CountdownStep" | "CountdownStep":
 				return getCountdownStepProxy();
 		}
 
@@ -509,11 +509,27 @@ class HScriptHandler {
 		"openfl.display" => ["openfl.display.Bitmap", "openfl.display.BitmapData", "openfl.display.Sprite", "openfl.display.Shape", "openfl.display.BlendMode"],
 		"openfl.filters" => ["openfl.filters.ShaderFilter", "openfl.filters.BlurFilter", "openfl.filters.ColorMatrixFilter", "openfl.filters.DropShadowFilter", "openfl.filters.GlowFilter"],
 		"openfl.geom" => ["openfl.geom.Matrix", "openfl.geom.Point", "openfl.geom.Rectangle", "openfl.geom.ColorTransform"],
-		"backend" => ["backend.Conductor", "backend.CoolUtil", "backend.Mods", "backend.Timings", "backend.Section", "backend.Song", "backend.Highscore", "backend.HScriptHandler", "backend.ModState", "backend.ModSubState", "backend.FunkinShader"],
-		"funkin.objects" => ["funkin.objects.Character", "funkin.objects.Stage", "funkin.objects.FunkinSprites", "funkin.objects.FunkinArrows", "funkin.objects.FunkinArrows.Note", "funkin.objects.FunkinArrows.UIStaticArrow", "funkin.objects.FunkinArrows.NoteSplash", "funkin.objects.FunkinArrows.Strumline", "funkin.objects.HealthIcon", "funkin.objects.Alphabet"],
-		"funkin.states" => ["funkin.states.PlayState", "funkin.states.MainMenuState", "funkin.states.FreeplayState", "funkin.states.StoryMenuState", "funkin.states.TitleState", "funkin.states.OptionsMenuState", "funkin.states.CreditsState", "funkin.states.ModsMenuState", "funkin.states.MusicBeatState"],
-		"funkin.substates" => ["funkin.substates.GameOverSubstate", "funkin.substates.PauseSubState", "funkin.substates.MusicBeatSubstate"],
-		"funkin.game.modchart" => ["funkin.game.modchart.ModManager"]
+		"core.base" => ["core.base.Init", "core.base.MusicBeatState", "core.base.MusicBeatSubState", "core.base.FunkinState"],
+		"core.system" => ["core.system.Paths", "core.system.Assets", "core.system.Discord", "core.system.FunkinMemory", "core.system.FunkinShader", "core.system.FunkinTransition", "core.system.FunkinSprites"],
+		"core.save" => ["core.save.SaveData", "core.save.SaveManager", "core.save.Highscore", "core.save.ClientPrefs"],
+		"core.input" => ["core.input.Controls", "core.input.PlayerSettings"],
+		"core.scripting" => ["core.scripting.HScriptHandler", "core.scripting.Mods", "core.scripting.ModState"],
+		"core.utils" => ["core.utils.CoolUtil", "core.utils.Utils", "core.utils.MathUtil", "core.utils.Vector3"],
+		"gameplay" => ["gameplay.PlayState", "gameplay.Conductor", "gameplay.Timings", "gameplay.Countdown"],
+		"gameplay.chart" => ["gameplay.chart.Song", "gameplay.chart.Section", "gameplay.chart.ChartLoader", "gameplay.chart.ChartConverter"],
+		"gameplay.objects" => ["gameplay.objects.Character", "gameplay.objects.Boyfriend", "gameplay.objects.Stage", "gameplay.objects.FunkinArrows"],
+		"gameplay.hud" => ["gameplay.hud.HealthIcon", "gameplay.hud.ClassHUD"],
+		"gameplay.dialogue" => ["gameplay.dialogue.Dialogue", "gameplay.dialogue.DialogueBox"],
+		"gameplay.substates" => ["gameplay.substates.GameOverSubstate", "gameplay.substates.PauseSubState"],
+		"gameplay.modchart" => ["gameplay.modchart.ModManager"],
+		"menus" => ["menus.TitleState", "menus.MainMenuState", "menus.FreeplayState", "menus.OptionsMenuState", "menus.CreditsState", "menus.ModsMenuState", "menus.WeekData"],
+		"menus.objects" => ["menus.objects.Alphabet", "menus.objects.MenuItem", "menus.objects.MenuCharacter", "menus.objects.Selector", "menus.objects.Checkmark"],
+		"editors" => ["editors.ChartEditor", "editors.CharacterEditor", "editors.CameraEditor"],
+		"editors.dev" => ["editors.dev.DevConsole", "editors.dev.DebugUI", "editors.dev.Overlay", "editors.dev.TestState"],
+		"backend" => ["gameplay.Conductor", "core.utils.CoolUtil", "core.scripting.Mods", "gameplay.Timings", "gameplay.chart.Section", "gameplay.chart.Song", "core.save.Highscore", "core.scripting.HScriptHandler", "core.scripting.ModState", "core.system.FunkinShader"],
+		"funkin.objects" => ["gameplay.objects.Character", "gameplay.objects.Stage", "core.system.FunkinSprites", "gameplay.objects.FunkinArrows", "gameplay.hud.HealthIcon", "menus.objects.Alphabet"],
+		"funkin.states" => ["gameplay.PlayState", "menus.MainMenuState", "menus.FreeplayState", "menus.TitleState", "menus.OptionsMenuState", "menus.CreditsState", "menus.ModsMenuState", "core.base.MusicBeatState"],
+		"funkin.substates" => ["gameplay.substates.GameOverSubstate", "gameplay.substates.PauseSubState", "core.base.MusicBeatSubState"]
 	];
 
 	public static function importClassToInterp(interp:Interp, fullPath:String, ?alias:String):Dynamic {
@@ -556,11 +572,11 @@ class HScriptHandler {
 					case "flixel.text.FlxText":
 						interp.variables.set("FlxTextAlign", getFlxTextAlignProxy());
 						interp.variables.set("FlxTextBorderStyle", getFlxTextBorderStyleProxy());
-					case "funkin.objects.FunkinArrows":
-						interp.variables.set("Note", funkin.objects.FunkinArrows.Note);
-						interp.variables.set("UIStaticArrow", funkin.objects.FunkinArrows.UIStaticArrow);
-						interp.variables.set("NoteSplash", funkin.objects.FunkinArrows.NoteSplash);
-						interp.variables.set("Strumline", funkin.objects.FunkinArrows.Strumline);
+					case "gameplay.objects.FunkinArrows":
+						interp.variables.set("Note", gameplay.objects.FunkinArrows.Note);
+						interp.variables.set("UIStaticArrow", gameplay.objects.FunkinArrows.UIStaticArrow);
+						interp.variables.set("NoteSplash", gameplay.objects.FunkinArrows.NoteSplash);
+						interp.variables.set("Strumline", gameplay.objects.FunkinArrows.Strumline);
 				}
 			}
 			return resolved;
@@ -687,11 +703,11 @@ class HScriptHandler {
 		setVar("Json", haxe.Json);
 
 		// Shader Classes & Helpers
-		setVar("FunkinShader", backend.FunkinShader.FunkinShaderImpl);
+		setVar("FunkinShader", core.system.FunkinShader.FunkinShaderImpl);
 		setVar("FlxRuntimeShader", flixel.addons.display.FlxRuntimeShader);
 		setVar("ShaderFilter", openfl.filters.ShaderFilter);
 		setVar("createShader", function(frag:String, ?vert:String) {
-			return backend.FunkinShader.FunkinShaderImpl.fromFile(frag, vert);
+			return core.system.FunkinShader.FunkinShaderImpl.fromFile(frag, vert);
 		});
 		setVar("setCameraShader", function(camera:flixel.FlxCamera, shader:Dynamic) {
 			if (camera == null) return;
@@ -708,23 +724,23 @@ class HScriptHandler {
 			if (camera != null) camera.filters = null;
 		});
 		setVar("tweenShader", function(shader:Dynamic, uniform:String, arg1:Float, ?arg2:Dynamic, ?arg3:Dynamic, ?arg4:Dynamic, ?arg5:Dynamic) {
-			return backend.FunkinShader.FunkinShaderImpl.tweenAnyShader(shader, uniform, arg1, arg2, arg3, arg4, arg5);
+			return core.system.FunkinShader.FunkinShaderImpl.tweenAnyShader(shader, uniform, arg1, arg2, arg3, arg4, arg5);
 		});
 		setVar("cancelShaderTween", function(shader:Dynamic, ?uniform:String) {
-			backend.FunkinShader.FunkinShaderImpl.cancelAnyShaderTween(shader, uniform);
+			core.system.FunkinShader.FunkinShaderImpl.cancelAnyShaderTween(shader, uniform);
 		});
 
 		// Game Specific Classes
 		setVar("PlayState", PlayState);
 		setVar("Paths", Paths);
 		setVar("Character", Character);
-		setVar("Conductor", backend.Conductor);
-		setVar("Mods", backend.Mods);
-		setVar("CoolUtil", backend.CoolUtil);
-		setVar("FunkinArrows", funkin.objects.FunkinArrows);
-		setVar("Note", funkin.objects.FunkinArrows.Note);
-		setVar("UIStaticArrow", funkin.objects.FunkinArrows.UIStaticArrow);
-		setVar("NoteSplash", funkin.objects.FunkinArrows.NoteSplash);
+		setVar("Conductor", gameplay.Conductor);
+		setVar("Mods", core.scripting.Mods);
+		setVar("CoolUtil", core.utils.CoolUtil);
+		setVar("FunkinArrows", gameplay.objects.FunkinArrows);
+		setVar("Note", gameplay.objects.FunkinArrows.Note);
+		setVar("UIStaticArrow", gameplay.objects.FunkinArrows.UIStaticArrow);
+		setVar("NoteSplash", gameplay.objects.FunkinArrows.NoteSplash);
 		#if hxvlc
 		setVar("FlxVideoSprite", hxvlc.flixel.FlxVideoSprite);
 		setVar("FlxVideo", hxvlc.flixel.FlxVideo);
@@ -765,7 +781,7 @@ class HScriptHandler {
 			setVar("skipCutscene", function() {
 				if (PlayState.instance != null) PlayState.instance.skipCutscene();
 			});
-			setVar("GameOverSubstate", funkin.substates.GameOverSubstate);
+			setVar("GameOverSubstate", gameplay.substates.GameOverSubstate);
 
 			// Modchart shortcuts
 			setVar("modManager", PlayState.instance != null ? PlayState.instance.modManager : null);
@@ -814,12 +830,12 @@ class HScriptHandler {
 		}
 
 		// Modchart Classes
-		setVar("ModManager", funkin.game.modchart.ModManager);
-		setVar("Vector3", funkin.backend.math.Vector3);
-		setVar("MathUtil", funkin.utils.MathUtil);
+		setVar("ModManager", gameplay.modchart.ModManager);
+		setVar("Vector3", core.utils.Vector3);
+		setVar("MathUtil", core.utils.MathUtil);
 
 		// Countdown
-		setVar("Countdown", funkin.play.Countdown);
+		setVar("Countdown", gameplay.Countdown);
 		setVar("CountdownStep", getCountdownStepProxy());
 
 		try {

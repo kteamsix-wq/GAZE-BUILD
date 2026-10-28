@@ -1,11 +1,11 @@
-package funkin.game.modchart.modifiers;
+﻿package gameplay.modchart.modifiers;
 
 import flixel.FlxSprite;
 import flixel.math.FlxMath;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.NoteModifier;
-import funkin.utils.MathUtil;
-import funkin.states.PlayState;
+import core.utils.Vector3;
+import gameplay.modchart.NoteModifier;
+import core.utils.MathUtil;
+import gameplay.PlayState;
 
 class BeatModifier extends NoteModifier
 {

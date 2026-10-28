@@ -1,9 +1,8 @@
-package funkin.states;
-
-import Paths;
-import Utils;
-import Assets;
-import Init;
+﻿package gameplay;
+import core.system.Paths;
+import core.utils.Utils;
+import core.system.Assets;
+import core.base.Init;
 import openfl.events.KeyboardEvent;
 
 import flixel.FlxBasic;
@@ -28,35 +27,35 @@ import flixel.util.FlxSort;
 import flixel.util.FlxTimer;
 import flixel.util.FlxTimer.FlxTimerManager;
 
-import backend.MusicBeatState;
-import backend.Song;
-import backend.Song.SwagSong;
-import backend.Conductor;
-import backend.Highscore;
-import backend.Timings;
-import backend.HScriptHandler;
-import backend.CoolUtil;
-import backend.HealthIcon;
-import backend.ChartConverter;
+import core.base.MusicBeatState;
+import gameplay.chart.Song;
+import gameplay.chart.Song.SwagSong;
+import gameplay.Conductor;
+import core.save.Highscore;
+import gameplay.Timings;
+import core.scripting.HScriptHandler;
+import core.utils.CoolUtil;
+import gameplay.hud.HealthIcon;
+import gameplay.chart.ChartConverter;
 
-import funkin.objects.FunkinArrows;
-import funkin.objects.FunkinArrows.UIStaticArrow;
-import funkin.objects.FunkinArrows.Strumline;
-import funkin.objects.FunkinArrows.Note;
-import funkin.objects.FunkinArrows.NoteSplash;
-import funkin.objects.Character;
-import funkin.objects.Boyfriend;
-import funkin.objects.Stage;
-import funkin.substates.PauseSubState;
-import funkin.substates.GameOverSubstate;
-import funkin.editors.ChartEditor;
-import funkin.game.modchart.ModManager;
-import funkin.backend.math.Vector3;
-import funkin.play.Countdown;
-import funkin.play.Countdown.CountdownStep;
+import gameplay.objects.FunkinArrows;
+import gameplay.objects.FunkinArrows.UIStaticArrow;
+import gameplay.objects.FunkinArrows.Strumline;
+import gameplay.objects.FunkinArrows.Note;
+import gameplay.objects.FunkinArrows.NoteSplash;
+import gameplay.objects.Character;
+import gameplay.objects.Boyfriend;
+import gameplay.objects.Stage;
+import gameplay.substates.PauseSubState;
+import gameplay.substates.GameOverSubstate;
+import editors.ChartEditor;
+import gameplay.modchart.ModManager;
+import core.utils.Vector3;
+import gameplay.Countdown;
+import gameplay.Countdown.CountdownStep;
 
 #if desktop
-import backend.Discord;
+import core.system.Discord;
 #end
 
 #if hxvlc
@@ -1030,14 +1029,14 @@ class PlayState extends MusicBeatState
 				{
 					clearActiveVideos();
 					resetMusic();
-					Main.switchState(this, new funkin.editors.CharacterEditor());
+					Main.switchState(this, new editors.CharacterEditor());
 				}
 
 				if (FlxG.keys.justPressed.NINE && !startingSong)
 				{
 					clearActiveVideos();
 					resetMusic();
-					Main.switchState(this, new funkin.editors.CameraEditor());
+					Main.switchState(this, new editors.CameraEditor());
 				}
 
 				if (FlxG.keys.justPressed.SIX)
@@ -4314,7 +4313,7 @@ class PlayState extends MusicBeatState
 		#end
 	}
 
-	public static function loadSongWithoutDifficulty(songName:String):backend.Song.SwagSong
+	public static function loadSongWithoutDifficulty(songName:String):gameplay.chart.Song.SwagSong
 	{
 		if (songName == null || songName.trim() == '')
 			return ChartConverter.createFallbackSong("unknown");
@@ -4368,25 +4367,25 @@ class PlayState extends MusicBeatState
 				{
 					case 'titlestate' | 'title':
 						returnCustomStateName = null;
-						returnStateFactory = () -> new funkin.states.TitleState();
+						returnStateFactory = () -> new menus.TitleState();
 					case 'mainmenustate' | 'mainmenu' | 'main':
 						returnCustomStateName = null;
-						returnStateFactory = () -> new funkin.states.MainMenuState();
+						returnStateFactory = () -> new menus.MainMenuState();
 					case 'freeplaystate' | 'freeplay':
 						returnCustomStateName = null;
-						returnStateFactory = () -> new funkin.states.FreeplayState();
+						returnStateFactory = () -> new menus.FreeplayState();
 					case 'optionsmenustate' | 'optionsstate' | 'options' | 'option':
 						returnCustomStateName = null;
-						returnStateFactory = () -> new funkin.states.OptionsMenuState();
+						returnStateFactory = () -> new menus.OptionsMenuState();
 					case 'creditsstate' | 'credits' | 'credit':
 						returnCustomStateName = null;
-						returnStateFactory = () -> new funkin.states.CreditsState();
+						returnStateFactory = () -> new menus.CreditsState();
 					case 'modsmenustate' | 'modsmenu' | 'mods':
 						returnCustomStateName = null;
-						returnStateFactory = () -> new funkin.states.ModsMenuState();
+						returnStateFactory = () -> new menus.ModsMenuState();
 					default:
 						returnCustomStateName = clean;
-						returnStateFactory = () -> new backend.ModState(clean);
+						returnStateFactory = () -> new core.scripting.ModState(clean);
 				}
 			}
 		}
@@ -4395,11 +4394,11 @@ class PlayState extends MusicBeatState
 			returnCustomStateName = null;
 			returnStateFactory = cast target;
 		}
-		else if (Std.isOfType(target, backend.ModState))
+		else if (Std.isOfType(target, core.scripting.ModState))
 		{
-			var modSt:backend.ModState = cast target;
+			var modSt:core.scripting.ModState = cast target;
 			returnCustomStateName = modSt.stateName;
-			returnStateFactory = () -> new backend.ModState(modSt.stateName);
+			returnStateFactory = () -> new core.scripting.ModState(modSt.stateName);
 		}
 		else if (Std.isOfType(target, flixel.FlxState))
 		{
@@ -4411,7 +4410,7 @@ class PlayState extends MusicBeatState
 					try {
 						return cast Type.createInstance(cls, []);
 					} catch (e:Dynamic) {
-						return new funkin.states.MainMenuState();
+						return new menus.MainMenuState();
 					}
 				};
 			}
@@ -4422,11 +4421,11 @@ class PlayState extends MusicBeatState
 	{
 		if (FlxG.state != null)
 		{
-			if (Std.isOfType(FlxG.state, backend.ModState))
+			if (Std.isOfType(FlxG.state, core.scripting.ModState))
 			{
-				var modState:backend.ModState = cast FlxG.state;
+				var modState:core.scripting.ModState = cast FlxG.state;
 				returnCustomStateName = modState.stateName;
-				returnStateFactory = () -> new backend.ModState(modState.stateName);
+				returnStateFactory = () -> new core.scripting.ModState(modState.stateName);
 			}
 			else
 			{
@@ -4438,7 +4437,7 @@ class PlayState extends MusicBeatState
 						try {
 							return cast Type.createInstance(cls, []);
 						} catch (e:Dynamic) {
-							return new funkin.states.MainMenuState();
+							return new menus.MainMenuState();
 						}
 					};
 				}
@@ -4449,7 +4448,7 @@ class PlayState extends MusicBeatState
 	public static function resolveStateByName(stateName:String):flixel.FlxState
 	{
 		if (stateName == null || stateName.trim().length == 0)
-			return isStoryMode ? new funkin.states.MainMenuState() : new funkin.states.FreeplayState();
+			return isStoryMode ? new menus.MainMenuState() : new menus.FreeplayState();
 
 		var clean:String = stateName.trim();
 		if (clean.endsWith('.hx'))
@@ -4459,19 +4458,19 @@ class PlayState extends MusicBeatState
 		switch (lower)
 		{
 			case 'titlestate' | 'title':
-				return new funkin.states.TitleState();
+				return new menus.TitleState();
 			case 'mainmenustate' | 'mainmenu' | 'main':
-				return new funkin.states.MainMenuState();
+				return new menus.MainMenuState();
 			case 'freeplaystate' | 'freeplay':
-				return new funkin.states.FreeplayState();
+				return new menus.FreeplayState();
 			case 'optionsmenustate' | 'optionsstate' | 'options' | 'option':
-				return new funkin.states.OptionsMenuState();
+				return new menus.OptionsMenuState();
 			case 'creditsstate' | 'credits' | 'credit':
-				return new funkin.states.CreditsState();
+				return new menus.CreditsState();
 			case 'modsmenustate' | 'modsmenu' | 'mods':
-				return new funkin.states.ModsMenuState();
+				return new menus.ModsMenuState();
 			default:
-				return new backend.ModState(clean);
+				return new core.scripting.ModState(clean);
 		}
 	}
 
@@ -4503,9 +4502,9 @@ class PlayState extends MusicBeatState
 			return state;
 
 		if (isStoryMode)
-			return new funkin.states.MainMenuState();
+			return new menus.MainMenuState();
 		else
-			return new funkin.states.FreeplayState();
+			return new menus.FreeplayState();
 	}
 
 	public static function playSong(nameSong:Dynamic, ?songList:Dynamic, ?difficulty:Null<Int> = 1, ?customReturnState:Dynamic):Void
@@ -4601,7 +4600,7 @@ class PlayState extends MusicBeatState
 		var diffName:String = CoolUtil.difficultyFromNumber(targetDiff).toLowerCase();
 		var songWithDiff:String = targetSong.toLowerCase() + (diffName == 'normal' ? '' : '-' + diffName);
 
-		var loadedSong:backend.Song.SwagSong = null;
+		var loadedSong:gameplay.chart.Song.SwagSong = null;
 		try
 		{
 			if (diffName != 'normal')
@@ -4879,7 +4878,7 @@ class PlayState extends MusicBeatState
 			try
 			{
 				var rawJson = sys.io.File.getContent(jsonPath);
-				var json:funkin.objects.Character.CharacterFile = haxe.Json.parse(rawJson);
+				var json:gameplay.objects.Character.CharacterFile = haxe.Json.parse(rawJson);
 				if (json != null && json.image != null)
 				{
 					Paths.returnGraphic(json.image, null, true);

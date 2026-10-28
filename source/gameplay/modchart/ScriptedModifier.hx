@@ -1,10 +1,10 @@
-package funkin.game.modchart;
+﻿package gameplay.modchart;
 
 import flixel.FlxSprite;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.Modifier.ModifierOrder;
-import funkin.game.modchart.Modifier.ModifierType;
-import backend.HScriptHandler;
+import core.utils.Vector3;
+import gameplay.modchart.Modifier.ModifierOrder;
+import gameplay.modchart.Modifier.ModifierType;
+import core.scripting.HScriptHandler;
 import sys.FileSystem;
 
 class ScriptedModifier extends Modifier
@@ -28,9 +28,9 @@ class ScriptedModifier extends Modifier
 			'assets/scripts/modifiers/$name.hx'
 		];
 
-		if (backend.Mods.currentModDirectory != null && backend.Mods.currentModDirectory != '')
+		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory != '')
 		{
-			searchPaths.unshift('mods/' + backend.Mods.currentModDirectory + '/scripts/modifiers/$name.hx');
+			searchPaths.unshift('mods/' + core.scripting.Mods.currentModDirectory + '/scripts/modifiers/$name.hx');
 		}
 
 		var scriptPath:String = null;
@@ -57,7 +57,7 @@ class ScriptedModifier extends Modifier
 				script.setVar('DEFAULT', DEFAULT);
 				script.setVar('LAST', LAST);
 				script.setVar('Vector3', Vector3);
-				script.setVar('MathUtil', funkin.utils.MathUtil);
+				script.setVar('MathUtil', core.utils.MathUtil);
 				script.setVar('modMgr', modMgr);
 				script.setVar('parent', parent);
 

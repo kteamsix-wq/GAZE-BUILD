@@ -1,12 +1,12 @@
-package funkin.game.modchart.modifiers;
+﻿package gameplay.modchart.modifiers;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
-import funkin.backend.math.Vector3;
-import funkin.game.modchart.NoteModifier;
-import funkin.objects.FunkinArrows.Note;
-import funkin.states.PlayState;
-import backend.Conductor;
+import core.utils.Vector3;
+import gameplay.modchart.NoteModifier;
+import gameplay.objects.FunkinArrows.Note;
+import gameplay.PlayState;
+import gameplay.Conductor;
 
 class ReceptorScrollModifier extends NoteModifier
 {

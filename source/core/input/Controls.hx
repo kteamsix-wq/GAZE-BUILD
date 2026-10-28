@@ -1,4 +1,4 @@
-package backend;
+﻿package core.input;
 
 import flixel.FlxG;
 import flixel.input.FlxInput;

@@ -1,4 +1,4 @@
-package backend;
+﻿package core.scripting;
 
 import sys.FileSystem;
 

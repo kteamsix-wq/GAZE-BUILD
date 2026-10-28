@@ -1,8 +1,8 @@
-package backend;
+﻿package gameplay.chart;
 
 import haxe.Json;
-import backend.Song.SwagSong;
-import backend.Section.SwagSection;
+import gameplay.chart.Song.SwagSong;
+import gameplay.chart.Section.SwagSection;
 #if sys
 import sys.FileSystem;
 import sys.io.File;
@@ -1432,7 +1432,7 @@ class ChartConverter
 		var searchPaths:Array<String> = [];
 
 		#if sys
-		var curMod = backend.Mods.currentModDirectory;
+		var curMod = core.scripting.Mods.currentModDirectory;
 		if (curMod != null && curMod.length > 0)
 		{
 			// Mod search paths

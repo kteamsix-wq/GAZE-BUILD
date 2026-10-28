@@ -1,12 +1,10 @@
-package backend;
+﻿package gameplay.chart;
 
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import backend.Song.SwagSong;
-import backend.ChartConverter;
-import funkin.states.PlayState;
-import Init;
+import gameplay.objects.FunkinArrows;
+import gameplay.chart.Song.SwagSong;
+import gameplay.chart.ChartConverter;
+import gameplay.PlayState;
+import core.base.Init;
 
 class ChartLoader
 {

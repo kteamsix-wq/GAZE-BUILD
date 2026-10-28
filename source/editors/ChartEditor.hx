@@ -1,7 +1,7 @@
-package funkin.editors;
-import Paths;
-import Utils;
-import Init;
+﻿package editors;
+import core.system.Paths;
+import core.utils.Utils;
+import core.base.Init;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.addons.display.FlxGridOverlay;
@@ -26,23 +26,23 @@ import flixel.ui.FlxButton;
 import flixel.ui.FlxSpriteButton;
 import flixel.util.FlxColor;
 import haxe.Json;
-import Assets;
-import backend.MusicBeatState;
-import backend.Conductor.BPMChangeEvent;
-import backend.Section.SwagSection;
-import backend.Song.SwagSong;
+import core.system.Assets;
+import core.base.MusicBeatState;
+import gameplay.Conductor.BPMChangeEvent;
+import gameplay.chart.Section.SwagSection;
+import gameplay.chart.Song.SwagSong;
 import openfl.events.Event;
 import openfl.events.IOErrorEvent;
 import openfl.media.Sound;
 import openfl.net.FileReference;
 import openfl.utils.ByteArray;
-import funkin.objects.FunkinArrows;
-import funkin.objects.FunkinArrows.Note;
-import backend.Conductor;
-import backend.CoolUtil;
-import backend.Song;
-import backend.Timings;
-import funkin.states.PlayState;
+import gameplay.objects.FunkinArrows;
+import gameplay.objects.FunkinArrows.Note;
+import gameplay.Conductor;
+import core.utils.CoolUtil;
+import gameplay.chart.Song;
+import gameplay.Timings;
+import gameplay.PlayState;
 using StringTools;
 
 /**
@@ -365,7 +365,7 @@ class ChartEditor extends MusicBeatState
 			PlayState.SONG = _song;
 			if (songMusic != null) songMusic.stop();
 			if (vocals != null) vocals.stop();
-			Main.switchState(this, new funkin.editors.CameraEditor());
+			Main.switchState(this, new editors.CameraEditor());
 		});
 
 		var reloadSongJson:FlxButton = new FlxButton(150, 285, "Reload JSON", function()
@@ -502,7 +502,7 @@ class ChartEditor extends MusicBeatState
 			PlayState.SONG = _song;
 			if (songMusic != null) songMusic.stop();
 			if (vocals != null) vocals.stop();
-			Main.switchState(this, new funkin.editors.CameraEditor());
+			Main.switchState(this, new editors.CameraEditor());
 		});
 
 		var txtCamInfo:FlxText = new FlxText(100, 34, 180, "Camera: Events", 8);

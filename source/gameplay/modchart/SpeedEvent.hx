@@ -1,4 +1,4 @@
-package funkin.game.modchart;
+﻿package gameplay.modchart;
 
 @:structInit class SpeedEvent
 {

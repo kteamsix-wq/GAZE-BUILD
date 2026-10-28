@@ -1,10 +1,10 @@
-package backend;
+﻿package gameplay.hud;
 
 import flixel.FlxSprite;
 import flixel.graphics.FlxGraphic;
 import sys.FileSystem;
-import Paths;
-import Init;
+import core.system.Paths;
+import core.base.Init;
 
 using StringTools;
 

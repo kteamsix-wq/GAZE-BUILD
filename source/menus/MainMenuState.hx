@@ -1,4 +1,4 @@
-package funkin.states;
+﻿package menus;
 
 import flixel.FlxG;
 import flixel.FlxObject;
@@ -9,8 +9,8 @@ import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
-import backend.MusicBeatState;
-import backend.Discord;
+import core.base.MusicBeatState;
+import core.system.Discord;
 
 /**
  * The main menu screen, handling navigation to different game modes and options.
@@ -123,7 +123,7 @@ class MainMenuState extends MusicBeatState
 
 			if (flixel.FlxG.keys.justPressed.SEVEN)
 			{
-				Main.switchState(this, new funkin.editors.CameraEditor());
+				Main.switchState(this, new editors.CameraEditor());
 			}
 
 			// Wrap around logic

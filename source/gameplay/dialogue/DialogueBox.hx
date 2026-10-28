@@ -1,4 +1,4 @@
-package backend;
+﻿package gameplay.dialogue;
 
 import flixel.FlxBasic;
 import flixel.FlxG;
@@ -10,8 +10,8 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
-import funkin.objects.FunkinSprites;
-import funkin.objects.Alphabet;
+import core.system.FunkinSprites;
+import menus.objects.Alphabet;
 
 // Define structures for JSON parsing
 typedef PortraitDataDef =

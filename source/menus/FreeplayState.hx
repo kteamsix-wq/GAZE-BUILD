@@ -1,4 +1,4 @@
-package funkin.states;
+﻿package menus;
 
 import flash.text.TextField;
 import flixel.FlxG;
@@ -16,17 +16,17 @@ import sys.FileSystem;
 import sys.thread.Mutex;
 import sys.thread.Thread;
 
-import backend.HealthIcon;
-import backend.MusicBeatState;
-import backend.Song;
-import backend.Highscore;
-import backend.WeekData;
-import backend.CoolUtil;
-import backend.ChartConverter;
-import backend.Timings;
-import funkin.objects.Alphabet;
+import gameplay.hud.HealthIcon;
+import core.base.MusicBeatState;
+import gameplay.chart.Song;
+import core.save.Highscore;
+import menus.WeekData;
+import core.utils.CoolUtil;
+import gameplay.chart.ChartConverter;
+import gameplay.Timings;
+import menus.objects.Alphabet;
 #if desktop
-import backend.Discord;
+import core.system.Discord;
 #end
 
 using StringTools;
@@ -88,7 +88,7 @@ class FreeplayState extends MusicBeatState
 				if (!hasChart(songFolder, songFolder))
 					continue;
 
-				var castSong:backend.Song.SwagSong = Song.loadFromJson(songFolder, songFolder);
+				var castSong:gameplay.chart.Song.SwagSong = Song.loadFromJson(songFolder, songFolder);
 				var icon:String = (castSong != null && castSong.player2 != null) ? castSong.player2 : 'gf';
 				addSong(songFolder, 1, icon, FlxColor.WHITE);
 			}

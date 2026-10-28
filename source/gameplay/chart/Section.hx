@@ -1,14 +1,10 @@
-﻿package backend;
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Assets;
-import Init;
+﻿package gameplay.chart;
+import gameplay.objects.FunkinArrows;
+import editors.*;
+import core.system.Paths;
+import core.utils.Utils;
+import core.system.Assets;
+import core.base.Init;
 
 typedef SwagSection =
 {

@@ -1,6 +1,6 @@
-package funkin.states;
+﻿package menus;
 
-import backend.MusicBeatState;
+import core.base.MusicBeatState;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;

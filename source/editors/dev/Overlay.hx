@@ -1,4 +1,4 @@
-package funkin.objects;
+﻿package editors.dev;
 
 import openfl.display.Sprite;
 import openfl.display.Shape;
@@ -11,10 +11,10 @@ import openfl.events.MouseEvent;
 import openfl.system.System;
 import haxe.Timer;
 import flixel.FlxG;
-import backend.FunkinMemory;
-import backend.Conductor;
-import backend.CoolUtil;
-import Paths;
+import core.system.FunkinMemory;
+import gameplay.Conductor;
+import core.utils.CoolUtil;
+import core.system.Paths;
 import Main;
 
 #if (cpp && windows)
@@ -205,7 +205,7 @@ class Overlay extends Sprite
 		// F2: Toggle Codename-style Developer Console Prompt
 		if (e.keyCode == 113)
 		{
-			funkin.objects.DevConsole.toggle();
+			editors.dev.DevConsole.toggle();
 		}
 		// F3: Toggle Debug Categories
 		else if (e.keyCode == 114)
@@ -407,9 +407,9 @@ class Overlay extends Sprite
 			var measureStr:String = "0";
 			try
 			{
-				if (FlxG.state != null && Std.isOfType(FlxG.state, backend.MusicBeatState))
+				if (FlxG.state != null && Std.isOfType(FlxG.state, core.base.MusicBeatState))
 				{
-					var mbs:backend.MusicBeatState = cast FlxG.state;
+					var mbs:core.base.MusicBeatState = cast FlxG.state;
 					stepStr = Std.string(mbs.curStep);
 					beatStr = Std.string(mbs.curBeat);
 					measureStr = Std.string(Math.floor(mbs.curBeat / 4));

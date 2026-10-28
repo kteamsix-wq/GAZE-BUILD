@@ -1,10 +1,10 @@
-package;
+﻿package core.system;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.util.FlxColor;
-import funkin.objects.Checkmark;
-import funkin.states.PlayState;
+import menus.objects.Checkmark;
+import gameplay.PlayState;
 
 /**
  * Assets class manages different asset types and specific sprite generations.

@@ -1,8 +1,8 @@
-package funkin.game.modchart;
+﻿package gameplay.modchart;
 
 import flixel.FlxSprite;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
-import funkin.backend.math.Vector3;
+import core.utils.Vector3;
 
 enum abstract ModifierType(String)
 {

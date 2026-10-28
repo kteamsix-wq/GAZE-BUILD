@@ -1,21 +1,17 @@
-package backend;
+﻿package gameplay.chart;
 
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Init;
+import gameplay.objects.FunkinArrows;
+import editors.*;
+import core.system.Paths;
+import core.utils.Utils;
+import core.base.Init;
 
 import flixel.FlxG;
 import haxe.Json;
 import haxe.format.JsonParser;
-import Assets;
-import backend.Section.SwagSection;
-import backend.ChartConverter;
+import core.system.Assets;
+import gameplay.chart.Section.SwagSection;
+import gameplay.chart.ChartConverter;
 #if sys
 import sys.FileSystem;
 import sys.io.File;

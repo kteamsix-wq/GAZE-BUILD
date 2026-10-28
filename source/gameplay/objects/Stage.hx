@@ -1,15 +1,11 @@
-package funkin.objects;
+﻿package gameplay.objects;
 
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Assets;
-import Init;
+import gameplay.objects.FunkinArrows;
+import editors.*;
+import core.system.Paths;
+import core.utils.Utils;
+import core.system.Assets;
+import core.base.Init;
 
 import haxe.io.Path;
 import flixel.util.FlxColor;
@@ -19,10 +15,10 @@ import flixel.FlxSprite;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.math.FlxPoint;
 import flixel.tweens.FlxTween;
-import backend.CoolUtil;
-import backend.Conductor;
-import funkin.objects.FunkinSprites;
-import funkin.states.PlayState;
+import core.utils.CoolUtil;
+import gameplay.Conductor;
+import core.system.FunkinSprites;
+import gameplay.PlayState;
 
 import sys.io.File;
 import sys.FileSystem;
@@ -30,7 +26,7 @@ import haxe.Json;
 
 #if sys
 import hscript.Parser;
-import backend.HScriptHandler.CustomInterp;
+import core.scripting.HScriptHandler.CustomInterp;
 #end
 
 using StringTools;
@@ -172,11 +168,11 @@ class Stage extends FlxTypedGroup<FlxBasic>
 				interp.variables.set("curSong", curSongName);
 				
 				// Shader Classes & Helpers
-				interp.variables.set("FunkinShader", backend.FunkinShader.FunkinShaderImpl);
+				interp.variables.set("FunkinShader", core.system.FunkinShader.FunkinShaderImpl);
 				interp.variables.set("FlxRuntimeShader", flixel.addons.display.FlxRuntimeShader);
 				interp.variables.set("ShaderFilter", openfl.filters.ShaderFilter);
 				interp.variables.set("createShader", function(frag:String, ?vert:String) {
-					return backend.FunkinShader.FunkinShaderImpl.fromFile(frag, vert);
+					return core.system.FunkinShader.FunkinShaderImpl.fromFile(frag, vert);
 				});
 				interp.variables.set("setCameraShader", function(camera:flixel.FlxCamera, shader:Dynamic) {
 					if (camera == null) return;
@@ -193,10 +189,10 @@ class Stage extends FlxTypedGroup<FlxBasic>
 					if (camera != null) camera.filters = null;
 				});
 				interp.variables.set("tweenShader", function(shader:Dynamic, uniform:String, arg1:Float, ?arg2:Dynamic, ?arg3:Dynamic, ?arg4:Dynamic, ?arg5:Dynamic) {
-					return backend.FunkinShader.FunkinShaderImpl.tweenAnyShader(shader, uniform, arg1, arg2, arg3, arg4, arg5);
+					return core.system.FunkinShader.FunkinShaderImpl.tweenAnyShader(shader, uniform, arg1, arg2, arg3, arg4, arg5);
 				});
 				interp.variables.set("cancelShaderTween", function(shader:Dynamic, ?uniform:String) {
-					backend.FunkinShader.FunkinShaderImpl.cancelAnyShaderTween(shader, uniform);
+					core.system.FunkinShader.FunkinShaderImpl.cancelAnyShaderTween(shader, uniform);
 				});
 
 				if (PlayState.instance != null) {
@@ -210,7 +206,7 @@ class Stage extends FlxTypedGroup<FlxBasic>
 					interp.variables.set("dadOpponent", PlayState.dadOpponent);
 					interp.variables.set("gf", PlayState.gf);
 					interp.variables.set("restartSong", function() { if (PlayState.instance != null) PlayState.instance.restartSong(); });
-					interp.variables.set("GameOverSubstate", funkin.substates.GameOverSubstate);
+					interp.variables.set("GameOverSubstate", gameplay.substates.GameOverSubstate);
 					interp.variables.set("changeCharacter", function(charType:Dynamic, newChar:String, ?x:Null<Float>, ?y:Null<Float>) {
 						if (PlayState.instance != null) {
 							var idx:Int = 1;
@@ -246,9 +242,9 @@ class Stage extends FlxTypedGroup<FlxBasic>
 				interp.variables.set("FlxVideoSprite", hxvlc.flixel.FlxVideoSprite);
 				interp.variables.set("FlxVideo", hxvlc.flixel.FlxVideo);
 				#end
-				interp.variables.set("playSong", funkin.states.PlayState.playSong);
-				interp.variables.set("setReturnState", funkin.states.PlayState.setReturnState);
-				interp.variables.set("getReturnState", funkin.states.PlayState.getReturnState);
+				interp.variables.set("playSong", gameplay.PlayState.playSong);
+				interp.variables.set("setReturnState", gameplay.PlayState.setReturnState);
+				interp.variables.set("getReturnState", gameplay.PlayState.getReturnState);
 
 				// Expose stage properties and add() function
 				interp.variables.set("stage", this);
@@ -272,9 +268,9 @@ class Stage extends FlxTypedGroup<FlxBasic>
 				interp.variables.set("foreground", this.foreground);
 
 				// Modchart shortcuts
-				interp.variables.set("ModManager", funkin.game.modchart.ModManager);
-				interp.variables.set("Vector3", funkin.backend.math.Vector3);
-				interp.variables.set("MathUtil", funkin.utils.MathUtil);
+				interp.variables.set("ModManager", gameplay.modchart.ModManager);
+				interp.variables.set("Vector3", core.utils.Vector3);
+				interp.variables.set("MathUtil", core.utils.MathUtil);
 				interp.variables.set("modManager", PlayState.instance != null ? PlayState.instance.modManager : null);
 				interp.variables.set("queueEase", function(step:Float, endStep:Float, modName:String, target:Float, style:String = 'linear', player:Int = -1, ?startVal:Float) {
 					if (PlayState.instance != null && PlayState.instance.modManager != null)

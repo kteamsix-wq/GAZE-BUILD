@@ -1,19 +1,15 @@
-﻿package backend;
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Assets;
-import Init;
+﻿package core.input;
+import gameplay.objects.FunkinArrows;
+import editors.*;
+import core.system.Paths;
+import core.utils.Utils;
+import core.system.Assets;
+import core.base.Init;
 
 import flixel.FlxCamera;
 import flixel.FlxG;
 import flixel.util.FlxSignal;
-import backend.Controls;
+import core.input.Controls;
 
 /**
 	I quite honestly have no use for this yet, I just wouldn't like to change how the meta information works

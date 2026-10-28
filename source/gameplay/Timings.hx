@@ -1,6 +1,6 @@
-package backend;
+﻿package gameplay;
 
-import funkin.states.PlayState;
+import gameplay.PlayState;
 
 using StringTools;
 

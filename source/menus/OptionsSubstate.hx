@@ -1,8 +1,6 @@
-package funkin.substates;
-
-import backend.*;
-import Paths;
-import Init;
+﻿package menus;
+import core.system.Paths;
+import core.base.Init;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.group.FlxGroup.FlxTypedGroup;
@@ -10,7 +8,7 @@ import flixel.input.keyboard.FlxKey;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.math.FlxMath;
-import backend.MusicBeatSubState;
+import core.base.MusicBeatSubState;
 
 using StringTools;
 

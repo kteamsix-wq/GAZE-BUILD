@@ -1,20 +1,16 @@
-package backend;
-import backend.*;
-import funkin.objects.*;
-import funkin.objects.FunkinArrows;
-import funkin.states.*;
-import funkin.substates.*;
-import funkin.editors.*;
-import Paths;
-import Utils;
-import Assets;
-import Init;
+﻿package core.base;
+import gameplay.objects.FunkinArrows;
+import editors.*;
+import core.system.Paths;
+import core.utils.Utils;
+import core.system.Assets;
+import core.base.Init;
 
 import flixel.FlxG;
 import flixel.math.FlxRect;
 import flixel.util.FlxTimer;
-import backend.Conductor.BPMChangeEvent;
-import funkin.objects.FunkinState;
+import gameplay.Conductor.BPMChangeEvent;
+import core.base.FunkinState;
 
 class MusicBeatState extends FunkinState
 {
@@ -33,7 +29,7 @@ class MusicBeatState extends FunkinState
 
 	override function create()
 	{
-		backend.FunkinMemory.init();
+		core.system.FunkinMemory.init();
 
 		if (transIn != null)
 			trace('reg ' + transIn.region);
@@ -47,7 +43,7 @@ class MusicBeatState extends FunkinState
 
 	override function update(elapsed:Float)
 	{
-		if (!Std.isOfType(this, funkin.states.PlayState) && !Std.isOfType(this, funkin.editors.ChartEditor) && !Std.isOfType(this, funkin.editors.CameraEditor))
+		if (!Std.isOfType(this, gameplay.PlayState) && !Std.isOfType(this, editors.ChartEditor) && !Std.isOfType(this, editors.CameraEditor))
 		{
 			if (FlxG.sound.music != null && FlxG.sound.music.playing)
 				Conductor.update(elapsed, FlxG.sound.music);
@@ -108,16 +104,16 @@ class MusicBeatState extends FunkinState
 
 	public static function playSong(nameSong:Dynamic, ?songList:Dynamic, ?difficulty:Null<Int>, ?customReturnState:Dynamic):Void
 	{
-		funkin.states.PlayState.playSong(nameSong, songList, difficulty, customReturnState);
+		gameplay.PlayState.playSong(nameSong, songList, difficulty, customReturnState);
 	}
 
 	public static function setReturnState(target:Dynamic):Void
 	{
-		funkin.states.PlayState.setReturnState(target);
+		gameplay.PlayState.setReturnState(target);
 	}
 
 	public static function getReturnState():flixel.FlxState
 	{
-		return funkin.states.PlayState.getReturnState();
+		return gameplay.PlayState.getReturnState();
 	}
 }
