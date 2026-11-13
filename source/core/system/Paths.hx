@@ -1,4 +1,4 @@
-﻿package core.system;
+package core.system;
 
 #if sys
 import sys.FileSystem;
@@ -43,6 +43,7 @@ class Paths
 
 	inline public static var SOUND_EXT:String = "ogg";
 	inline public static var VIDEO_EXT:String = "mp4";
+	public static final IMAGE_EXTS:Array<String> = ["png", "webp"];
 
 	// =========================================================================
 	// SECTION 2: DUAL-LAYER ASSET TRACKING & CACHE REGISTRIES
@@ -92,9 +93,27 @@ class Paths
 	 * List of assets excluded from memory purging (e.g. persistent menu tracks, common UI).
 	 */
 	public static var dumpExclusions:Array<String> = [
+		'assets/music/freakyMenu.$SOUND_EXT',
 		'assets/music/system/freakyMenu.$SOUND_EXT',
 		'assets/music/foreverMenu.$SOUND_EXT',
-		'assets/music/system/breakfast.$SOUND_EXT'
+		'assets/music/breakfast.$SOUND_EXT',
+		'assets/music/system/breakfast.$SOUND_EXT',
+		'assets/images/UI/cursor/cursor-default.png',
+		'assets/images/UI/cursor/cursor-pointer.png',
+		'assets/images/UI/cursor/cursor-grabbing.png',
+		'assets/images/UI/cursor/cursor-cross.png',
+		'assets/images/UI/cursor/cursor-scroll.png',
+		'assets/images/UI/cursor/cursor-text.png',
+		'assets/images/UI/cursor/cursor-eraser.png',
+		'assets/images/UI/cursor/cursor-hourglass.png',
+		'assets/images/menus/editors/cursor-default.png',
+		'assets/images/menus/editors/cursor-pointer.png',
+		'assets/images/menus/editors/cursor-grabbing.png',
+		'assets/images/menus/editors/cursor-cross.png',
+		'assets/images/menus/editors/cursor-scroll.png',
+		'assets/images/menus/editors/cursor-text.png',
+		'assets/images/menus/editors/cursor-eraser.png',
+		'assets/images/menus/editors/cursor-hourglass.png'
 	];
 
 	// =========================================================================
@@ -119,6 +138,11 @@ class Paths
 		if (dumpExclusions.contains(key) || FunkinMemory.permanentCachedTextures.exists(key) || FunkinMemory.permanentCachedSounds.exists(key))
 			return true;
 		var normalizedKey:String = key.toLowerCase();
+		if (normalizedKey.endsWith('.webp'))
+		{
+			var pngEquivalent = normalizedKey.substr(0, normalizedKey.length - 5) + '.png';
+			if (dumpExclusions.contains(pngEquivalent)) return true;
+		}
 		return normalizedKey.indexOf('flixel/') == 0
 			|| normalizedKey.indexOf('/flixel/') != -1
 			|| normalizedKey.indexOf('fonts/') != -1
@@ -160,6 +184,7 @@ class Paths
 		currentTrackedSounds = [];
 		localTrackedAssets = [];
 		tempPathsCache = [];
+		Utils.clearSkinAssetCache();
 	}
 
 	/**
@@ -429,6 +454,7 @@ class Paths
 	/**
 	 * Resolves the file path for an asset, searching mod directories first,
 	 * with per-state path caching (`tempPathsCache`) like Codename Engine.
+	 * Automatically falls back between .png and .webp for IMAGE assets.
 	 */
 	public static function getPath(file:String, type:AssetType, ?library:Null<String>):String
 	{
@@ -440,42 +466,78 @@ class Paths
 		if (tempPathsCache.exists(cacheKey))
 			return tempPathsCache.get(cacheKey);
 
-		if (library != null)
+		var resolved:String = resolveSinglePath(file, type, library, modDir);
+		#if sys
+		var exists:Bool = (resolved != null && FileSystem.exists(resolved));
+		#else
+		var exists:Bool = (resolved != null && OpenFlAssets.exists(resolved, type));
+		#end
+
+		// If not found and this is an image, check alternate image extension (.png <-> .webp)
+		if (!exists && type == IMAGE)
 		{
-			var libResolved:String = getLibraryPath(file, library);
-			tempPathsCache.set(cacheKey, libResolved);
-			return libResolved;
+			var altFile:String = null;
+			if (file.endsWith('.png'))
+				altFile = file.substr(0, file.length - 4) + '.webp';
+			else if (file.endsWith('.webp'))
+				altFile = file.substr(0, file.length - 5) + '.png';
+
+			if (altFile != null)
+			{
+				var altResolved:String = resolveSinglePath(altFile, type, library, modDir);
+				#if sys
+				if (altResolved != null && FileSystem.exists(altResolved))
+				{
+					tempPathsCache.set(cacheKey, altResolved);
+					return altResolved;
+				}
+				#else
+				if (altResolved != null && OpenFlAssets.exists(altResolved, type))
+				{
+					tempPathsCache.set(cacheKey, altResolved);
+					return altResolved;
+				}
+				#end
+			}
 		}
+
+		tempPathsCache.set(cacheKey, resolved);
+		return resolved;
+	}
+
+	private static function resolveSinglePath(file:String, type:AssetType, ?library:Null<String>, modDir:String = ""):String
+	{
+		if (library != null)
+			return getLibraryPath(file, library);
 
 		#if sys
 		if (modDir.length > 0)
 		{
 			var modPath:String = 'mods/' + modDir + '/' + file;
 			if (FileSystem.exists(modPath))
-			{
-				tempPathsCache.set(cacheKey, modPath);
 				return modPath;
-			}
 		}
 
 		var globalModPath:String = 'mods/' + file;
 		if (FileSystem.exists(globalModPath))
-		{
-			tempPathsCache.set(cacheKey, globalModPath);
 			return globalModPath;
+
+		for (m in core.scripting.Mods.getModDirectories())
+		{
+			if (m != modDir)
+			{
+				var otherModPath:String = 'mods/' + m + '/' + file;
+				if (FileSystem.exists(otherModPath))
+					return otherModPath;
+			}
 		}
 		#end
 
 		var levelPath:String = getLibraryPathForce(file, "mods");
 		if (OpenFlAssets.exists(levelPath, type))
-		{
-			tempPathsCache.set(cacheKey, levelPath);
 			return levelPath;
-		}
 
-		var preloadResolved:String = getPreloadPath(file);
-		tempPathsCache.set(cacheKey, preloadResolved);
-		return preloadResolved;
+		return getPreloadPath(file);
 	}
 
 	public static function getLibraryPath(file:String, library:String = "preload"):String
@@ -504,12 +566,241 @@ class Paths
 
 	public static function formatToSongPath(path:String):String
 	{
-		return CoolUtil.swapSpaceDash(path.toLowerCase());
+		if (path == null) return "";
+		var formatted:String = path.trim().toLowerCase();
+		formatted = formatted.replace(' ', '-').replace('_', '-');
+		while (formatted.indexOf('--') != -1)
+			formatted = formatted.replace('--', '-');
+		return formatted;
 	}
 
 	// =========================================================================
-	// SECTION 5: IMAGE & GRAPHIC PIPELINE (CODENAME GPU-ONLY BITMAPS)
+	// SECTION 5: IMAGE & GRAPHIC PIPELINE (CODENAME GPU-ONLY BITMAPS + WEBP)
 	// =========================================================================
+
+	/**
+	 * Currently active stage name (defaults to 'stage'). Used by stageImage and sparrowImage when stage is omitted.
+	 */
+	public static var currentStage:String = "stage";
+
+	/**
+	 * Resolves an image path from a stage's images folder (e.g. `data/stages/<stage>/img/`),
+	 * testing for .png and .webp variants across mod and asset directories.
+	 */
+	public static function getStageImagePath(cleanKey:String, ?stage:String, ?library:String, ?preferredExt:String):String
+	{
+		if (cleanKey == null || cleanKey.length == 0) return "";
+
+		var stageName:String = (stage != null && stage.length > 0) ? stage : (currentStage != null && currentStage.length > 0 ? currentStage : "stage");
+
+		var explicitExt:String = null;
+		var key:String = cleanKey;
+		if (key.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			key = key.substr(0, key.length - 5);
+		}
+		else if (key.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
+			key = key.substr(0, key.length - 4);
+		}
+
+		if (key.startsWith('img/'))
+			key = key.substring(4);
+		else if (key.startsWith('images/'))
+			key = key.substring(7);
+
+		var extensions:Array<String> = (explicitExt != null) 
+			? [explicitExt] 
+			: ((preferredExt != null && preferredExt.toLowerCase() == 'webp') ? ['webp', 'png'] : ['png', 'webp']);
+
+		var candidatePrefixes:Array<String> = [
+			'data/stages/$stageName/img/$key',
+			'data/stages/$stageName/images/$key',
+			'data/stages/$stageName/$key',
+			'stages/$stageName/img/$key',
+			'stages/$stageName/images/$key',
+			'stages/$stageName/$key',
+			'images/backgrounds/$stageName/$key',
+			'images/backgrounds/$key',
+			'images/$stageName/$key',
+			'images/$key'
+		];
+
+		for (prefix in candidatePrefixes)
+		{
+			for (ext in extensions)
+			{
+				var candidate = getPath('$prefix.$ext', IMAGE, library);
+				#if sys
+				if (FileSystem.exists(candidate))
+					return candidate;
+				#end
+				if (OpenFlAssets.exists(candidate, IMAGE) || OpenFlAssets.exists(candidate))
+					return candidate;
+			}
+		}
+
+		return getPath('data/stages/$stageName/img/$key.' + (explicitExt != null ? explicitExt : (preferredExt != null ? preferredExt : 'png')), IMAGE, library);
+	}
+
+	/**
+	 * Checks whether a stage image asset exists (in either .png or .webp format).
+	 */
+	public static function stageImageExists(key:String, ?stage:String, ?library:String):Bool
+	{
+		if (key == null || key.length == 0) return false;
+		var resolved = getStageImagePath(key, stage, library);
+		#if sys
+		if (FileSystem.exists(resolved)) return true;
+		#end
+		return OpenFlAssets.exists(resolved, IMAGE) || OpenFlAssets.exists(resolved);
+	}
+
+	/**
+	 * Resolves an image path, testing for .png and .webp variants across mod and asset directories.
+	 */
+	public static function getImagePath(cleanKey:String, ?library:String, ?preferredExt:String):String
+	{
+		var extensions:Array<String> = (preferredExt != null && preferredExt.toLowerCase() == 'webp') ? ['webp', 'png'] : ['png', 'webp'];
+
+		for (ext in extensions)
+		{
+			var candidate = getPath('images/$cleanKey.$ext', IMAGE, library);
+			#if sys
+			if (FileSystem.exists(candidate))
+				return candidate;
+			#end
+			if (OpenFlAssets.exists(candidate, IMAGE) || OpenFlAssets.exists(candidate))
+				return candidate;
+		}
+
+		return getPath('images/$cleanKey.' + (preferredExt != null ? preferredExt : 'png'), IMAGE, library);
+	}
+
+	/**
+	 * Checks whether an image asset exists (in either .png or .webp format).
+	 */
+	public static function imageExists(key:String, ?library:String):Bool
+	{
+		if (key == null || key.length == 0) return false;
+		var cleanKey:String = key;
+		var explicitExt:String = null;
+		if (cleanKey.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
+		if (cleanKey.startsWith('images/'))
+			cleanKey = cleanKey.substring(7);
+
+		var resolved = getImagePath(cleanKey, library, explicitExt);
+		#if sys
+		if (FileSystem.exists(resolved)) return true;
+		#end
+		return OpenFlAssets.exists(resolved, IMAGE) || OpenFlAssets.exists(resolved);
+	}
+
+	/**
+	 * Configures FlxAnimate asset hooks so texture atlases load .webp spritemaps and assets correctly.
+	 */
+	public static function initFlxAnimate():Void
+	{
+		try
+		{
+			animate.FlxAnimateAssets.getBitmapData = function(path:String):BitmapData
+			{
+				return loadBitmap(path);
+			};
+		}
+		catch (e:Dynamic)
+		{
+			FlxG.log.warn('Could not hook FlxAnimateAssets: ' + e);
+		}
+	}
+
+	static function __init__():Void
+	{
+		initFlxAnimate();
+	}
+
+	/**
+	 * Loads an OpenFL BitmapData from a file path or asset key, supporting both PNG and WebP formats.
+	 */
+	public static function loadBitmap(path:String):BitmapData
+	{
+		if (path == null || path.length == 0) return null;
+
+		var targetPath:String = path;
+
+		#if sys
+		if (!FileSystem.exists(targetPath))
+		{
+			// Check if counterpart exists (.webp <-> .png)
+			if (targetPath.toLowerCase().endsWith('.png'))
+			{
+				var alt = targetPath.substr(0, targetPath.length - 4) + '.webp';
+				if (FileSystem.exists(alt)) targetPath = alt;
+			}
+			else if (targetPath.toLowerCase().endsWith('.webp'))
+			{
+				var alt = targetPath.substr(0, targetPath.length - 5) + '.png';
+				if (FileSystem.exists(alt)) targetPath = alt;
+			}
+		}
+
+		if (!FileSystem.exists(targetPath))
+		{
+			var cleanKey = path;
+			if (cleanKey.toLowerCase().endsWith('.webp'))
+				cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+			else if (cleanKey.toLowerCase().endsWith('.png'))
+				cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+			if (cleanKey.startsWith('images/'))
+				cleanKey = cleanKey.substring(7);
+			var candidate = getImagePath(cleanKey);
+			if (candidate != null && (FileSystem.exists(candidate) || OpenFlAssets.exists(candidate, IMAGE) || OpenFlAssets.exists(candidate)))
+				targetPath = candidate;
+		}
+		#end
+
+		if (WebPUtil.isWebP(targetPath))
+			return WebPUtil.getBitmapData(targetPath);
+
+		#if sys
+		if (FileSystem.exists(targetPath))
+		{
+			try
+			{
+				return BitmapData.fromFile(targetPath);
+			}
+			catch (e:Dynamic)
+			{
+				FlxG.log.warn('Could not load bitmap from file: $targetPath - $e');
+			}
+		}
+		#end
+
+		if (OpenFlAssets.exists(targetPath, IMAGE) || OpenFlAssets.exists(targetPath))
+		{
+			try
+			{
+				return OpenFlAssets.getBitmapData(targetPath, false);
+			}
+			catch (e:Dynamic)
+			{
+				FlxG.log.warn('Could not load bitmap from OpenFlAssets: $targetPath - $e');
+			}
+		}
+
+		return null;
+	}
 
 	/**
 	 * Loads a graphic with Codename Engine-style GPU texture streaming and memory offloading.
@@ -521,23 +812,75 @@ class Paths
 	}
 
 	/**
+	 * Loads a graphic from the stage's images folder (e.g. `data/stages/<stage>/img/`),
+	 * with Codename Engine-style GPU texture streaming and memory offloading.
+	 */
+	public static function stageImage(key:String, ?stage:String, ?library:String, ?textureCompression:Null<Bool> = null):FlxGraphic
+	{
+		if (key == null || key.length == 0)
+			return null;
+
+		var stageName:String = (stage != null && stage.length > 0) ? stage : (currentStage != null && currentStage.length > 0 ? currentStage : "stage");
+		var cleanKey:String = key;
+		var explicitExt:String = null;
+		if (cleanKey.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
+		if (cleanKey.startsWith('img/'))
+			cleanKey = cleanKey.substring(4);
+		else if (cleanKey.startsWith('images/'))
+			cleanKey = cleanKey.substring(7);
+
+		var path:String = getStageImagePath(cleanKey, stageName, library, explicitExt);
+		return returnGraphicFromPath(path, textureCompression);
+	}
+
+	/**
 	 * Core image loader. Handles two-layer caching, GPU texture uploads, and CPU RAM disposal.
+	 * Seamlessly supports both .png and .webp graphics.
 	 */
 	public static function returnGraphic(key:String, ?library:String, ?textureCompression:Null<Bool> = null):FlxGraphic
 	{
 		if (key == null || key.length == 0)
 			return null;
 
-		var useGpu:Bool = (textureCompression != null) ? textureCompression : gpuCaching;
-
-		// Normalize clean key
+		// Normalize clean key & detect explicit extension
 		var cleanKey:String = key;
-		if (cleanKey.endsWith('.png'))
+		var explicitExt:String = null;
+		if (cleanKey.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
 			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
 		if (cleanKey.startsWith('images/'))
 			cleanKey = cleanKey.substring(7);
 
-		var path:String = getPath('images/$cleanKey.png', IMAGE, library);
+		var path:String = getImagePath(cleanKey, library, explicitExt);
+		return returnGraphicFromPath(path, textureCompression);
+	}
+
+	/**
+	 * Core image loader from a resolved file path.
+	 * Handles two-layer caching, Stage3D GPU texture uploads, CPU RAM disposal, and tracking.
+	 */
+	public static function returnGraphicFromPath(path:String, ?textureCompression:Null<Bool> = null):FlxGraphic
+	{
+		if (path == null || path.length == 0)
+			return null;
+
+		var useGpu:Bool = (textureCompression != null) ? textureCompression : gpuCaching;
 
 		// 1. Layer 1 Cache Lookup (Current State)
 		if (currentTrackedAssets.exists(path))
@@ -604,37 +947,12 @@ class Paths
 			}
 		}
 
-		// 3. Load BitmapData from disk or OpenFL assets
-		var bitmap:BitmapData = null;
-		#if sys
-		if (FileSystem.exists(path))
-		{
-			try
-			{
-				bitmap = BitmapData.fromFile(path);
-			}
-			catch (e:Dynamic)
-			{
-				FlxG.log.warn('Could not load bitmap from file: $path - $e');
-			}
-		}
-		#end
-
-		if (bitmap == null && OpenFlAssets.exists(path, IMAGE))
-		{
-			try
-			{
-				bitmap = OpenFlAssets.getBitmapData(path, false);
-			}
-			catch (e:Dynamic)
-			{
-				FlxG.log.warn('Could not load bitmap from OpenFlAssets: $path - $e');
-			}
-		}
+		// 3. Load BitmapData from disk or OpenFL assets (PNG & WebP supported)
+		var bitmap:BitmapData = loadBitmap(path);
 
 		if (bitmap == null || bitmap.width <= 0 || bitmap.height <= 0)
 		{
-			FlxG.log.warn('Image asset not found: $path (key: $key)');
+			FlxG.log.warn('Image asset not found: $path');
 			return null;
 		}
 
@@ -644,10 +962,24 @@ class Paths
 		{
 			try
 			{
-				var texture:Texture = FlxG.stage.context3D.createTexture(bitmap.width, bitmap.height, BGRA, true, 0);
+				var texture:Texture = FlxG.stage.context3D.createTexture(bitmap.width, bitmap.height, BGRA, false, 0);
 				texture.uploadFromBitmapData(bitmap);
 
+				var gpuBitmap:BitmapData = BitmapData.fromTexture(texture);
+				newGraphic = FlxGraphic.fromBitmapData(gpuBitmap, false, path, false);
+				currentTrackedTextures.set(path, texture);
+
 				// Immediately free heavy CPU pixel buffers from RAM and Lime/OpenFL caches
+				@:privateAccess
+				if (bitmap.image != null)
+				{
+					if (bitmap.image.buffer != null)
+					{
+						bitmap.image.buffer.data = null;
+						bitmap.image.buffer = null;
+					}
+					bitmap.image = null;
+				}
 				bitmap.disposeImage();
 				bitmap.dispose();
 
@@ -658,10 +990,6 @@ class Paths
 				@:privateAccess
 				if (OpenFlAssets.cache != null && OpenFlAssets.cache.hasBitmapData(path))
 					OpenFlAssets.cache.removeBitmapData(path);
-
-				var gpuBitmap:BitmapData = BitmapData.fromTexture(texture);
-				newGraphic = FlxGraphic.fromBitmapData(gpuBitmap, false, path, false);
-				currentTrackedTextures.set(path, texture);
 			}
 			catch (e:Dynamic)
 			{
@@ -705,6 +1033,7 @@ class Paths
 
 	/**
 	 * Loads a Sparrow XML atlas with GPU texture support and two-layer frame caching.
+	 * Supports both PNG and WebP spritesheets.
 	 */
 	public static function getSparrowAtlas(key:String, ?library:String, ?textureCompression:Null<Bool> = null):FlxAtlasFrames
 	{
@@ -712,12 +1041,25 @@ class Paths
 			return null;
 
 		var cleanKey:String = key;
-		if (cleanKey.endsWith('.xml') || cleanKey.endsWith('.png'))
-			cleanKey = cleanKey.substr(0, cleanKey.lastIndexOf('.'));
+		var explicitExt:String = null;
+		if (cleanKey.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.xml'))
+		{
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
 		if (cleanKey.startsWith('images/'))
 			cleanKey = cleanKey.substring(7);
 
-		var graphicPath:String = getPath('images/$cleanKey.png', IMAGE, library);
+		var graphicPath:String = getImagePath(cleanKey, library, explicitExt);
 
 		// 1. Layer 1 Atlas Cache Check
 		if (currentTrackedAtlases.exists(graphicPath))
@@ -726,7 +1068,7 @@ class Paths
 			if (cached != null && cached.frames != null && cached.parent != null && !cached.parent.isDestroyed)
 			{
 				// Ensure underlying FlxGraphic is also tracked/rescued
-				returnGraphic(cleanKey, library, textureCompression);
+				returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 				trackAsset(graphicPath);
 				return cached;
 			}
@@ -743,7 +1085,7 @@ class Paths
 			if (prevAtlas != null && prevAtlas.frames != null && prevAtlas.parent != null && !prevAtlas.parent.isDestroyed)
 			{
 				// Rescue both the parent FlxGraphic/Texture and the parsed FlxAtlasFrames
-				returnGraphic(cleanKey, library, textureCompression);
+				returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 				previousTrackedAtlases.remove(graphicPath);
 				currentTrackedAtlases.set(graphicPath, prevAtlas);
 				trackAsset(graphicPath);
@@ -755,7 +1097,7 @@ class Paths
 			}
 		}
 
-		var graphic:FlxGraphic = returnGraphic(cleanKey, library, textureCompression);
+		var graphic:FlxGraphic = returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 		if (graphic == null)
 			return null;
 
@@ -795,7 +1137,130 @@ class Paths
 	}
 
 	/**
+	 * Loads a Sparrow XML atlas from the stage's images folder (e.g. `data/stages/<stage>/img/`),
+	 * with GPU texture support and two-layer frame caching.
+	 * Exactly matches `getSparrowAtlas` functionality while pulling from the stage images directory.
+	 */
+	public static function sparrowImage(key:String, ?stage:String, ?library:String, ?textureCompression:Null<Bool> = null):FlxAtlasFrames
+	{
+		if (key == null || key.length == 0)
+			return null;
+
+		var stageName:String = (stage != null && stage.length > 0) ? stage : (currentStage != null && currentStage.length > 0 ? currentStage : "stage");
+
+		var cleanKey:String = key;
+		var explicitExt:String = null;
+		if (cleanKey.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.xml'))
+		{
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
+
+		if (cleanKey.startsWith('img/'))
+			cleanKey = cleanKey.substring(4);
+		else if (cleanKey.startsWith('images/'))
+			cleanKey = cleanKey.substring(7);
+
+		var graphicPath:String = getStageImagePath(cleanKey, stageName, library, explicitExt);
+
+		// 1. Layer 1 Atlas Cache Check
+		if (currentTrackedAtlases.exists(graphicPath))
+		{
+			var cached:FlxAtlasFrames = currentTrackedAtlases.get(graphicPath);
+			if (cached != null && cached.frames != null && cached.parent != null && !cached.parent.isDestroyed)
+			{
+				returnGraphicFromPath(graphicPath, textureCompression);
+				trackAsset(graphicPath);
+				return cached;
+			}
+			else
+			{
+				currentTrackedAtlases.remove(graphicPath);
+			}
+		}
+
+		// 2. Layer 2 Atlas Cache Check & Rescue
+		if (previousTrackedAtlases.exists(graphicPath))
+		{
+			var prevAtlas:FlxAtlasFrames = previousTrackedAtlases.get(graphicPath);
+			if (prevAtlas != null && prevAtlas.frames != null && prevAtlas.parent != null && !prevAtlas.parent.isDestroyed)
+			{
+				returnGraphicFromPath(graphicPath, textureCompression);
+				previousTrackedAtlases.remove(graphicPath);
+				currentTrackedAtlases.set(graphicPath, prevAtlas);
+				trackAsset(graphicPath);
+				return prevAtlas;
+			}
+			else
+			{
+				previousTrackedAtlases.remove(graphicPath);
+			}
+		}
+
+		var graphic:FlxGraphic = returnGraphicFromPath(graphicPath, textureCompression);
+		if (graphic == null)
+			return null;
+
+		// 3. Find XML file in stage directory
+		var xmlCandidates:Array<String> = [
+			'data/stages/$stageName/img/$cleanKey.xml',
+			'data/stages/$stageName/images/$cleanKey.xml',
+			'data/stages/$stageName/$cleanKey.xml',
+			'stages/$stageName/img/$cleanKey.xml',
+			'stages/$stageName/images/$cleanKey.xml',
+			'stages/$stageName/$cleanKey.xml',
+			'images/backgrounds/$stageName/$cleanKey.xml',
+			'images/backgrounds/$cleanKey.xml',
+			'images/$stageName/$cleanKey.xml',
+			'images/$cleanKey.xml'
+		];
+
+		var xmlContent:String = null;
+		for (candidate in xmlCandidates)
+		{
+			var p = getPath(candidate, TEXT, library);
+			#if sys
+			if (FileSystem.exists(p))
+			{
+				xmlContent = File.getContent(p);
+				break;
+			}
+			#end
+			if (OpenFlAssets.exists(p, TEXT))
+			{
+				xmlContent = OpenFlAssets.getText(p);
+				break;
+			}
+		}
+
+		if (xmlContent == null)
+		{
+			FlxG.log.warn('Sparrow XML description not found for stage image: $cleanKey (stage: $stageName)');
+			return null;
+		}
+
+		var frames:FlxAtlasFrames = FlxAtlasFrames.fromSparrow(graphic, xmlContent);
+		if (frames != null)
+		{
+			currentTrackedAtlases.set(graphicPath, frames);
+			trackAsset(graphicPath);
+		}
+
+		return frames;
+	}
+
+	/**
 	 * Loads a SpriteSheet Packer TXT atlas with GPU texture support and two-layer frame caching.
+	 * Supports both PNG and WebP spritesheets.
 	 */
 	public static function getPackerAtlas(key:String, ?library:String, ?textureCompression:Null<Bool> = null):FlxAtlasFrames
 	{
@@ -803,19 +1268,32 @@ class Paths
 			return null;
 
 		var cleanKey:String = key;
-		if (cleanKey.endsWith('.txt') || cleanKey.endsWith('.png'))
-			cleanKey = cleanKey.substr(0, cleanKey.lastIndexOf('.'));
+		var explicitExt:String = null;
+		if (cleanKey.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.txt'))
+		{
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
 		if (cleanKey.startsWith('images/'))
 			cleanKey = cleanKey.substring(7);
 
-		var graphicPath:String = getPath('images/$cleanKey.png', IMAGE, library);
+		var graphicPath:String = getImagePath(cleanKey, library, explicitExt);
 
 		if (currentTrackedAtlases.exists(graphicPath))
 		{
 			var cached:FlxAtlasFrames = currentTrackedAtlases.get(graphicPath);
 			if (cached != null && cached.frames != null && cached.parent != null && !cached.parent.isDestroyed)
 			{
-				returnGraphic(cleanKey, library, textureCompression);
+				returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 				trackAsset(graphicPath);
 				return cached;
 			}
@@ -830,7 +1308,7 @@ class Paths
 			var prevAtlas:FlxAtlasFrames = previousTrackedAtlases.get(graphicPath);
 			if (prevAtlas != null && prevAtlas.frames != null && prevAtlas.parent != null && !prevAtlas.parent.isDestroyed)
 			{
-				returnGraphic(cleanKey, library, textureCompression);
+				returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 				previousTrackedAtlases.remove(graphicPath);
 				currentTrackedAtlases.set(graphicPath, prevAtlas);
 				trackAsset(graphicPath);
@@ -842,7 +1320,7 @@ class Paths
 			}
 		}
 
-		var graphic:FlxGraphic = returnGraphic(cleanKey, library, textureCompression);
+		var graphic:FlxGraphic = returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 		if (graphic == null)
 			return null;
 
@@ -883,6 +1361,7 @@ class Paths
 
 	/**
 	 * Loads an Aseprite / TexturePacker JSON atlas with GPU texture support and two-layer frame caching.
+	 * Supports both PNG and WebP spritesheets.
 	 */
 	public static function getAsepriteAtlas(key:String, ?library:String, ?textureCompression:Null<Bool> = null):FlxAtlasFrames
 	{
@@ -890,19 +1369,32 @@ class Paths
 			return null;
 
 		var cleanKey:String = key;
-		if (cleanKey.endsWith('.json') || cleanKey.endsWith('.png'))
-			cleanKey = cleanKey.substr(0, cleanKey.lastIndexOf('.'));
+		var explicitExt:String = null;
+		if (cleanKey.toLowerCase().endsWith('.webp'))
+		{
+			explicitExt = 'webp';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.png'))
+		{
+			explicitExt = 'png';
+			cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+		}
+		else if (cleanKey.toLowerCase().endsWith('.json'))
+		{
+			cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+		}
 		if (cleanKey.startsWith('images/'))
 			cleanKey = cleanKey.substring(7);
 
-		var graphicPath:String = getPath('images/$cleanKey.png', IMAGE, library);
+		var graphicPath:String = getImagePath(cleanKey, library, explicitExt);
 
 		if (currentTrackedAtlases.exists(graphicPath))
 		{
 			var cached:FlxAtlasFrames = currentTrackedAtlases.get(graphicPath);
 			if (cached != null && cached.frames != null && cached.parent != null && !cached.parent.isDestroyed)
 			{
-				returnGraphic(cleanKey, library, textureCompression);
+				returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 				trackAsset(graphicPath);
 				return cached;
 			}
@@ -917,7 +1409,7 @@ class Paths
 			var prevAtlas:FlxAtlasFrames = previousTrackedAtlases.get(graphicPath);
 			if (prevAtlas != null && prevAtlas.frames != null && prevAtlas.parent != null && !prevAtlas.parent.isDestroyed)
 			{
-				returnGraphic(cleanKey, library, textureCompression);
+				returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 				previousTrackedAtlases.remove(graphicPath);
 				currentTrackedAtlases.set(graphicPath, prevAtlas);
 				trackAsset(graphicPath);
@@ -929,7 +1421,7 @@ class Paths
 			}
 		}
 
-		var graphic:FlxGraphic = returnGraphic(cleanKey, library, textureCompression);
+		var graphic:FlxGraphic = returnGraphic(cleanKey + (explicitExt != null ? '.$explicitExt' : ''), library, textureCompression);
 		if (graphic == null)
 			return null;
 
@@ -998,35 +1490,58 @@ class Paths
 
 	/**
 	 * Checks if a specific song audio file exists in mods or assets (direct or audio/ folder).
+	 * Resolves spaces, dashes, and underscores interchangeably for cross-engine compatibility.
 	 */
 	public static function songAudioExists(song:String, fileName:String):Bool
 	{
-		var folder:String = formatToSongPath(song);
-		var direct:String = 'songs/$folder/$fileName.$SOUND_EXT';
-		var audio:String = 'songs/$folder/audio/$fileName.$SOUND_EXT';
+		var folderVariants:Array<String> = CoolUtil.getSongNameVariants(song);
+		if (folderVariants.length == 0)
+			folderVariants.push(formatToSongPath(song));
 
 		#if sys
-		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
+		var curMod = core.scripting.Mods.currentModDirectory;
+		var modDirs:Array<String> = [];
+		if (curMod != null && curMod.length > 0)
+			modDirs.push(curMod);
+
+		for (m in core.scripting.Mods.getModDirectories())
 		{
-			if (FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + direct)
-				|| FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + audio))
+			if (!modDirs.contains(m))
+				modDirs.push(m);
+		}
+
+		for (f in folderVariants)
+		{
+			var direct:String = 'songs/$f/$fileName.$SOUND_EXT';
+			var audio:String = 'songs/$f/audio/$fileName.$SOUND_EXT';
+
+			for (m in modDirs)
+			{
+				if (FileSystem.exists('mods/$m/$direct') || FileSystem.exists('mods/$m/$audio'))
+					return true;
+			}
+			if (FileSystem.exists('mods/$direct') || FileSystem.exists('mods/$audio'))
+				return true;
+			if (FileSystem.exists('assets/$direct') || FileSystem.exists('assets/$audio'))
 				return true;
 		}
-		if (FileSystem.exists('mods/' + direct) || FileSystem.exists('mods/' + audio))
-			return true;
-		if (FileSystem.exists('assets/' + direct) || FileSystem.exists('assets/' + audio))
-			return true;
 		#end
 
-		var levelDirect = getLibraryPathForce(direct, "mods");
-		var levelAudio = getLibraryPathForce(audio, "mods");
-		if (OpenFlAssets.exists(levelDirect, SOUND) || OpenFlAssets.exists(levelAudio, SOUND))
-			return true;
+		for (f in folderVariants)
+		{
+			var direct:String = 'songs/$f/$fileName.$SOUND_EXT';
+			var audio:String = 'songs/$f/audio/$fileName.$SOUND_EXT';
 
-		var preDirect = getPreloadPath(direct);
-		var preAudio = getPreloadPath(audio);
-		if (OpenFlAssets.exists(preDirect, SOUND) || OpenFlAssets.exists(preAudio, SOUND))
-			return true;
+			var levelDirect = getLibraryPathForce(direct, "mods");
+			var levelAudio = getLibraryPathForce(audio, "mods");
+			if (OpenFlAssets.exists(levelDirect, SOUND) || OpenFlAssets.exists(levelAudio, SOUND))
+				return true;
+
+			var preDirect = getPreloadPath(direct);
+			var preAudio = getPreloadPath(audio);
+			if (OpenFlAssets.exists(preDirect, SOUND) || OpenFlAssets.exists(preAudio, SOUND))
+				return true;
+		}
 
 		return false;
 	}
@@ -1117,41 +1632,67 @@ class Paths
 
 	/**
 	 * Resolves song audio file placement across mods and asset folders (direct vs. audio/ subfolder).
+	 * Resolves spaces, dashes, and underscores interchangeably for cross-engine compatibility.
 	 */
 	private static function songAudioKey(song:String, fileName:String):String
 	{
-		var folder:String = formatToSongPath(song);
+		var folderVariants:Array<String> = CoolUtil.getSongNameVariants(song);
+		if (folderVariants.length == 0)
+			folderVariants.push(formatToSongPath(song));
 
-		// 1. Direct song path: songs/$folder/$fileName.ogg
-		var checkDirect:String = 'songs/$folder/$fileName.$SOUND_EXT';
 		#if sys
-		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
-		{
-			if (FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + checkDirect))
-				return '$folder/$fileName';
-		}
-		if (FileSystem.exists('mods/' + checkDirect))
-			return '$folder/$fileName';
-		if (FileSystem.exists('assets/' + checkDirect))
-			return '$folder/$fileName';
-		#end
+		var curMod = core.scripting.Mods.currentModDirectory;
+		var modDirs:Array<String> = [];
+		if (curMod != null && curMod.length > 0)
+			modDirs.push(curMod);
 
-		// 2. Subfolder path: songs/$folder/audio/$fileName.ogg
-		var checkAudio:String = 'songs/$folder/audio/$fileName.$SOUND_EXT';
-		#if sys
-		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0)
+		for (m in core.scripting.Mods.getModDirectories())
 		{
-			if (FileSystem.exists('mods/' + core.scripting.Mods.currentModDirectory + '/' + checkAudio))
-				return '$folder/audio/$fileName';
+			if (!modDirs.contains(m))
+				modDirs.push(m);
 		}
-		if (FileSystem.exists('mods/' + checkAudio))
-			return '$folder/audio/$fileName';
-		if (FileSystem.exists('assets/' + checkAudio))
-			return '$folder/audio/$fileName';
+
+		// 1. Direct song path: songs/$f/$fileName.ogg
+		for (f in folderVariants)
+		{
+			var checkDirect:String = 'songs/$f/$fileName.$SOUND_EXT';
+			for (m in modDirs)
+			{
+				if (FileSystem.exists('mods/$m/$checkDirect'))
+				{
+					if (core.scripting.Mods.currentModDirectory != m)
+						core.scripting.Mods.currentModDirectory = m;
+					return '$f/$fileName';
+				}
+			}
+			if (FileSystem.exists('mods/$checkDirect'))
+				return '$f/$fileName';
+			if (FileSystem.exists('assets/$checkDirect'))
+				return '$f/$fileName';
+		}
+
+		// 2. Subfolder path: songs/$f/audio/$fileName.ogg
+		for (f in folderVariants)
+		{
+			var checkAudio:String = 'songs/$f/audio/$fileName.$SOUND_EXT';
+			for (m in modDirs)
+			{
+				if (FileSystem.exists('mods/$m/$checkAudio'))
+				{
+					if (core.scripting.Mods.currentModDirectory != m)
+						core.scripting.Mods.currentModDirectory = m;
+					return '$f/audio/$fileName';
+				}
+			}
+			if (FileSystem.exists('mods/$checkAudio'))
+				return '$f/audio/$fileName';
+			if (FileSystem.exists('assets/$checkAudio'))
+				return '$f/audio/$fileName';
+		}
 		#end
 
 		// Default fallback
-		return '$folder/audio/$fileName';
+		return '${folderVariants[0]}/audio/$fileName';
 	}
 
 	/**
@@ -1167,24 +1708,71 @@ class Paths
 		if (cleanKey.endsWith('.' + SOUND_EXT))
 			cleanKey = cleanKey.substr(0, cleanKey.length - (SOUND_EXT.length + 1));
 
-		var fileToFind:String = '$path/$cleanKey.$SOUND_EXT';
-		var gottenPath:String = getPath(fileToFind, SOUND, library);
+		var candidates:Array<String> = [];
+		if (cleanKey.startsWith('system/'))
+		{
+			var withoutSystem = cleanKey.substring(7);
+			candidates.push('$path/$withoutSystem.$SOUND_EXT');
+			candidates.push('$path/$cleanKey.$SOUND_EXT');
+		}
+		else
+		{
+			candidates.push('$path/$cleanKey.$SOUND_EXT');
+			candidates.push('$path/system/$cleanKey.$SOUND_EXT');
+		}
 
-		// Sanitize Lime library prefix while preserving Windows drive letters (e.g. C:/)
-		var colonIndex:Int = gottenPath.indexOf(':');
-		#if sys
-		if (colonIndex > 1 && !FileSystem.exists(gottenPath))
+		if (!cleanKey.contains('/'))
 		{
-			var stripped:String = gottenPath.substring(colonIndex + 1);
-			if (FileSystem.exists(stripped))
-				gottenPath = stripped;
+			candidates.push('$path/gameover/$cleanKey.$SOUND_EXT');
+			candidates.push('$path/system/gameover/$cleanKey.$SOUND_EXT');
+			candidates.push('$path/countdown/default/$cleanKey.$SOUND_EXT');
+			candidates.push('$path/system/countdown/default/$cleanKey.$SOUND_EXT');
 		}
-		#else
-		if (colonIndex > 1)
+
+		var gottenPath:String = null;
+		for (c in candidates)
 		{
-			gottenPath = gottenPath.substring(colonIndex + 1);
+			var p = getPath(c, SOUND, library);
+			var colonIndex:Int = p.indexOf(':');
+			#if sys
+			if (colonIndex > 1 && !FileSystem.exists(p))
+			{
+				var stripped:String = p.substring(colonIndex + 1);
+				if (FileSystem.exists(stripped))
+					p = stripped;
+			}
+			if (FileSystem.exists(p))
+			{
+				gottenPath = p;
+				break;
+			}
+			#else
+			if (colonIndex > 1)
+				p = p.substring(colonIndex + 1);
+			if (OpenFlAssets.exists(p, SOUND))
+			{
+				gottenPath = p;
+				break;
+			}
+			#end
 		}
-		#end
+
+		if (gottenPath == null)
+		{
+			gottenPath = getPath(candidates[0], SOUND, library);
+			var colonIndex:Int = gottenPath.indexOf(':');
+			#if sys
+			if (colonIndex > 1 && !FileSystem.exists(gottenPath))
+			{
+				var stripped:String = gottenPath.substring(colonIndex + 1);
+				if (FileSystem.exists(stripped))
+					gottenPath = stripped;
+			}
+			#else
+			if (colonIndex > 1)
+				gottenPath = gottenPath.substring(colonIndex + 1);
+			#end
+		}
 
 		// 1. Layer 1 Cache Lookup (Current State)
 		if (currentTrackedSounds.exists(gottenPath))

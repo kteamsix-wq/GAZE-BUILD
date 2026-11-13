@@ -1,4 +1,4 @@
-﻿package gameplay;
+package gameplay;
 import core.system.Paths;
 import core.utils.Utils;
 import core.system.Assets;
@@ -85,13 +85,14 @@ enum Focus
  */
 class PlayState extends MusicBeatState
 {
-	// =========================================================================
-	// SECTION 1: STATIC VARIABLES & STATE
-	// =========================================================================
-
 	// Instance references
 	public static var instance:PlayState;
 	public static var uiHUD:PlayState;
+
+	// Cached callback arguments to prevent GC churn during frame updates
+	private static var _stepArg:Array<Dynamic> = [0];
+	private static var _beatArg:Array<Dynamic> = [0];
+	private static var _elapsedArg:Array<Dynamic> = [0.0];
 
 	// Story & Week configuration
 	public static var isStoryMode:Bool = false;
@@ -169,13 +170,12 @@ class PlayState extends MusicBeatState
 	public static var _modchartVector:Vector3 = Vector3.get();
 	public static var _nextModchartVector:Vector3 = Vector3.get();
 
-	// =========================================================================
-	// SECTION 2: INSTANCE VARIABLES
-	// =========================================================================
-
 	// Stage & Scripts
 	public var stageBuild:Stage;
+	public var stageCache:Map<String, Stage> = new Map<String, Stage>();
 	public var hscriptArray:Array<HScriptHandler> = [];
+	public var customEndState:Bool = false;
+	public var healthBarClipRect:Dynamic = null;
 
 	// Modchart Manager
 	public var modManager:ModManager;
@@ -368,10 +368,6 @@ class PlayState extends MusicBeatState
 	public var cutsceneFinishHandler:Void->Void = null;
 	#end
 
-	// =========================================================================
-	// SECTION 3: LIFECYCLE (resetStatics, create, destroy)
-	// =========================================================================
-
 	private function resetStatics():Void
 	{
 		instance = this;
@@ -491,7 +487,7 @@ class PlayState extends MusicBeatState
 		displayRating('sick', 'early', true);
 		popUpCombo(true);
 		for (i in 1...4)
-			Paths.sound('system/miss/missnote' + i);
+			Paths.sound('miss/missnote' + i);
 		Paths.image('UI/combo/default/good');
 		Paths.image('UI/combo/default/bad');
 		Paths.image('UI/combo/default/shit');
@@ -507,6 +503,8 @@ class PlayState extends MusicBeatState
 
 		// Initialize Stage & Characters
 		stageBuild = new Stage(curStage);
+		if (stageCache == null) stageCache = new Map<String, Stage>();
+		stageCache.set(curStage, stageBuild);
 		add(stageBuild.background);
 
 		if (stageBuild != null && stageBuild.stageData != null && stageBuild.stageData.zoom > 0)
@@ -525,8 +523,12 @@ class PlayState extends MusicBeatState
 		gf.setCharacter(initGfX, initGfY, daGF);
 		gf.scrollFactor.set(0.95, 0.95);
 
-		dadOpponent = new Character().setCharacter(initDadX, initDadY, SONG.player2);
+		dadOpponent = new Character();
+		dadOpponent.adjustPos = false;
+		dadOpponent.setCharacter(initDadX, initDadY, SONG.player2);
+
 		boyfriend = new Boyfriend();
+		boyfriend.adjustPos = false;
 		boyfriend.setCharacter(initBfX, initBfY, SONG.player1);
 
 		camPos = new FlxPoint(gf.getMidpoint().x - 100, boyfriend.getMidpoint().y - 100);
@@ -656,136 +658,12 @@ class PlayState extends MusicBeatState
 
 		updateCamFollow();
 
-		// Expose variables to scripts
 		for (script in hscriptArray) {
-			script.setVar("Countdown", Countdown);
-			script.setVar("CountdownStep", {
-				BEFORE: CountdownStep.BEFORE,
-				THREE: CountdownStep.THREE,
-				TWO: CountdownStep.TWO,
-				ONE: CountdownStep.ONE,
-				GO: CountdownStep.GO,
-				AFTER: CountdownStep.AFTER
-			});
-			script.setVar("startCountdown", startCountdown);
-			script.setVar("skipCountdown", Countdown.skipCountdown);
-			script.setVar("triggerEvent", triggerEvent);
-			script.setVar("playCharacterAnim", playCharacterAnim);
-			script.setVar("addCameraZoom", addCameraZoom);
-			script.setVar("playVideo", playVideo);
-			script.setVar("startVideo", startVideo);
-			script.setVar("skipCutscene", skipCutscene);
-			script.setVar("playSong", playSong);
-			script.setVar("setReturnState", setReturnState);
-			script.setVar("getReturnState", getReturnState);
-			script.setVar("boyfriend", boyfriend);
-			script.setVar("dad", dadOpponent);
-			script.setVar("dadOpponent", dadOpponent);
-			script.setVar("gf", gf);
-			script.setVar("songMusic", songMusic);
-			script.setVar("inst", songMusic);
-			script.setVar("vocals", vocals);
-			script.setVar("playerVocals", vocals);
-			script.setVar("opponentVocals", opponentVocals);
-			script.setVar("modManager", modManager);
-			script.setVar("camGame2", camGame2);
-			script.setVar("camGame", camGame);
-			script.setVar("camHUD", camHUD);
-			script.setVar("camAlt", camAlt);
-			script.setVar("iconP1", iconP1);
-			script.setVar("iconP2", iconP2);
-			script.setVar("healthBar", healthBar);
-			script.setVar("healthBarBG", healthBarBG);
-			script.setVar("scoreBar", scoreBar);
-			script.setVar("centerMark", centerMark);
-			script.setVar("autoplayMark", autoplayMark);
-
-			// Modern camera methods & variables
-			script.setVar("cameraSpeed", cameraSpeed);
-			script.setVar("camZoomSpeed", camZoomSpeed);
-			script.setVar("camZooming", camZooming);
-			script.setVar("camZoomingMult", camZoomingMult);
-			script.setVar("camZoomingFrequency", camZoomingFrequency);
-			script.setVar("defaultCamZoom", defaultCamZoom);
-			script.setVar("camFollow", camFollow);
-			script.setVar("camFollowPos", camFollowPos);
-			script.setVar("moveCamera", moveCamera);
-			script.setVar("moveCameraTo", moveCameraTo);
-			script.setVar("snapCamera", snapCamera);
-			script.setVar("setCameraTarget", setCameraTarget);
-			script.setVar("bfCamOffset", bfCamOffset);
-			script.setVar("dadCamOffset", dadCamOffset);
-			script.setVar("gfCamOffset", gfCamOffset);
-			script.setVar("camFollowOffset", camFollowOffset);
-
-			// Modder HUD customization variables & methods
-			script.setVar("healthBarPosition", healthBarPosition);
-			script.setVar("healthBarOffset", healthBarOffset);
-			script.setVar("healthBarInnerOffset", healthBarInnerOffset);
-			script.setVar("healthBarScale", healthBarScale);
-			script.setVar("healthBarAlpha", healthBarAlpha);
-			script.setVar("showHealthBar", showHealthBar);
-			script.setVar("showIcons", showIcons);
-			script.setVar("iconOffset", iconOffset);
-			script.setVar("iconBopScale", iconBopScale);
-			script.setVar("iconP1Offset", iconP1Offset);
-			script.setVar("iconP2Offset", iconP2Offset);
-			script.setVar("scoreBarOffset", scoreBarOffset);
-			script.setVar("showScoreBar", showScoreBar);
-			script.setVar("scoreTemplate", scoreTemplate);
-			script.setVar("customScoreText", customScoreText);
-			script.setVar("updateScoreText", updateScoreText);
-			script.setVar("ratingOffset", ratingOffset);
-			script.setVar("comboOffset", comboOffset);
-			script.setVar("ratingScale", ratingScale);
-			script.setVar("comboScale", comboScale);
-			script.setVar("showRating", showRating);
-			script.setVar("showCombo", showCombo);
-			script.setVar("setHUDAlpha", setHUDAlpha);
-			script.setVar("setHUDVisible", setHUDVisible);
-			script.setVar("reloadHUD", reloadHUD);
+			script.loadPlayStateVariables(this);
 		}
 		#if sys
-		if (stageBuild != null && stageBuild.interp != null) {
-			stageBuild.interp.variables.set("Countdown", Countdown);
-			stageBuild.interp.variables.set("CountdownStep", {
-				BEFORE: CountdownStep.BEFORE,
-				THREE: CountdownStep.THREE,
-				TWO: CountdownStep.TWO,
-				ONE: CountdownStep.ONE,
-				GO: CountdownStep.GO,
-				AFTER: CountdownStep.AFTER
-			});
-			stageBuild.interp.variables.set("startCountdown", startCountdown);
-			stageBuild.interp.variables.set("skipCountdown", Countdown.skipCountdown);
-			stageBuild.interp.variables.set("triggerEvent", triggerEvent);
-			stageBuild.interp.variables.set("playCharacterAnim", playCharacterAnim);
-			stageBuild.interp.variables.set("addCameraZoom", addCameraZoom);
-			stageBuild.interp.variables.set("playVideo", playVideo);
-			stageBuild.interp.variables.set("startVideo", startVideo);
-			stageBuild.interp.variables.set("skipCutscene", skipCutscene);
-			stageBuild.interp.variables.set("playSong", playSong);
-			stageBuild.interp.variables.set("setReturnState", setReturnState);
-			stageBuild.interp.variables.set("getReturnState", getReturnState);
-			stageBuild.interp.variables.set("boyfriend", boyfriend);
-			stageBuild.interp.variables.set("dad", dadOpponent);
-			stageBuild.interp.variables.set("dadOpponent", dadOpponent);
-			stageBuild.interp.variables.set("gf", gf);
-			stageBuild.interp.variables.set("songMusic", songMusic);
-			stageBuild.interp.variables.set("inst", songMusic);
-			stageBuild.interp.variables.set("vocals", vocals);
-			stageBuild.interp.variables.set("playerVocals", vocals);
-			stageBuild.interp.variables.set("opponentVocals", opponentVocals);
-			stageBuild.interp.variables.set("modManager", modManager);
-			stageBuild.interp.variables.set("camGame2", camGame2);
-			stageBuild.interp.variables.set("camGame", camGame);
-			stageBuild.interp.variables.set("camHUD", camHUD);
-			stageBuild.interp.variables.set("camAlt", camAlt);
-			stageBuild.interp.variables.set("snapCamera", snapCamera);
-			stageBuild.interp.variables.set("setCameraTarget", setCameraTarget);
-			stageBuild.interp.variables.set("setHUDAlpha", setHUDAlpha);
-			stageBuild.interp.variables.set("setHUDVisible", setHUDVisible);
-			stageBuild.interp.variables.set("reloadHUD", reloadHUD);
+		if (stageBuild != null && stageBuild.script != null) {
+			stageBuild.script.loadPlayStateVariables(this, stageBuild);
 		}
 		#end
 
@@ -874,10 +752,41 @@ class PlayState extends MusicBeatState
 		{
 			for (script in hscriptArray)
 			{
-				if (script != null && script.interp != null && script.interp.variables != null)
-					script.interp.variables.clear();
+				if (script != null)
+				{
+					try {
+						script.destroy();
+					} catch (e:Dynamic) {}
+				}
 			}
 			hscriptArray = [];
+		}
+		if (noteScripts != null)
+		{
+			for (script in noteScripts)
+			{
+				if (script != null)
+				{
+					try {
+						script.destroy();
+					} catch (e:Dynamic) {}
+				}
+			}
+			noteScripts.clear();
+		}
+		if (stageCache != null)
+		{
+			for (st in stageCache)
+			{
+				if (st != null)
+				{
+					try {
+						st.destroy();
+					} catch (e:Dynamic) {}
+				}
+			}
+			stageCache.clear();
+			stageCache = null;
 		}
 		if (stageBuild != null && stageBuild.interp != null && stageBuild.interp.variables != null)
 		{
@@ -898,6 +807,8 @@ class PlayState extends MusicBeatState
 
 		super.destroy();
 
+		grpRatings = null;
+		grpCombos = null;
 		stageBuild = null;
 		boyfriend = null;
 		dadOpponent = null;
@@ -916,10 +827,6 @@ class PlayState extends MusicBeatState
 		if (uiHUD == this)
 			uiHUD = null;
 	}
-
-	// =========================================================================
-	// SECTION 4: UPDATE & BEAT / STEP HIT LOOP
-	// =========================================================================
 
 	override public function update(elapsed:Float):Void
 	{
@@ -944,7 +851,8 @@ class PlayState extends MusicBeatState
 		}
 		#end
 
-		stageBuild.stageUpdateConstant(elapsed);
+		if (stageBuild != null)
+			stageBuild.stageUpdateConstant(elapsed);
 
 		// Song position progression (updated FIRST before super.update and modcharts/notes)
 		if (!inCutscene)
@@ -979,7 +887,10 @@ class PlayState extends MusicBeatState
 
 		super.update(elapsed);
 		if (hscriptArray.length > 0)
-			callOnScripts('onUpdate', [elapsed]);
+		{
+			_elapsedArg[0] = elapsed;
+			callOnScripts('onUpdate', _elapsedArg);
+		}
 		timerManager.update(elapsed);
 
 		// ModManager updates
@@ -1144,12 +1055,14 @@ class PlayState extends MusicBeatState
 			{
 				var dunceNote:Note = unspawnNotes[unspawnNotesIndex];
 				strumLines.members[dunceNote.playfield].push(dunceNote);
+				unspawnNotes[unspawnNotesIndex] = null;
 				unspawnNotesIndex++;
 				callNoteScript(dunceNote.noteSkin, "onSpawnNote", [dunceNote]);
 			}
 
 			noteCalls();
-			callNoteScripts("onUpdate", [elapsed]);
+			_elapsedArg[0] = elapsed;
+			callNoteScripts("onUpdate", _elapsedArg);
 
 			if (controllerMode)
 				controllerInput();
@@ -1182,7 +1095,10 @@ class PlayState extends MusicBeatState
 			stageBuild.stageStep(curStep);
 
 		if (hscriptArray.length > 0)
-			callOnScripts('onStepHit', [curStep]);
+		{
+			_stepArg[0] = curStep;
+			callOnScripts('onStepHit', _stepArg);
+		}
 
 		if (!startingSong && songMusic != null && songMusic.playing && songMusic.time > 0)
 		{
@@ -1211,7 +1127,10 @@ class PlayState extends MusicBeatState
 		hudBeatHit(curBeat);
 
 		if (hscriptArray.length > 0)
-			callOnScripts('onBeatHit', [curBeat]);
+		{
+			_beatArg[0] = curBeat;
+			callOnScripts('onBeatHit', _beatArg);
+		}
 
 		if (camZooming && !startingSong && !reducedMovements)
 		{
@@ -1234,7 +1153,8 @@ class PlayState extends MusicBeatState
 		}
 
 		charactersDance(curBeat);
-		stageBuild.stageUpdate(curBeat);
+		if (stageBuild != null)
+			stageBuild.stageUpdate(curBeat);
 	}
 
 	public function charactersDance(curBeat:Int):Void
@@ -1285,14 +1205,6 @@ class PlayState extends MusicBeatState
 			Conductor.syncTo(songMusic.time);
 		}
 	}
-
-	// =========================================================================
-	// SECTION 5: CAMERA SYSTEM
-	// =========================================================================
-
-	/**
-	 * Switches the active camera target focus with smooth tracking.
-	 */
 	/**
 	 * Switches the active camera target focus with smooth tracking.
 	 */
@@ -1647,10 +1559,6 @@ class PlayState extends MusicBeatState
 			&& receptor.animation.curAnim.name == 'confirm';
 	}
 
-	// =========================================================================
-	// SECTION 6: HUD & UI SYSTEM (Moved from ClassHUD)
-	// =========================================================================
-
 	public function setupHUD():Void
 	{
 		setupHealthBar();
@@ -1723,13 +1631,15 @@ class PlayState extends MusicBeatState
 		var dadIcon:String = (dadOpponent != null) ? dadOpponent.healthIcon : 'dad';
 
 		iconP1 = new HealthIcon(bfIcon, true);
-		iconP1.y = healthBar.y - (iconP1.height / 2) + iconP1Offset.y;
+		if (boyfriend != null) iconP1.copyFromCharacter(boyfriend);
+		iconP1.y = healthBar.y - (iconP1.height / 2) + iconP1Offset.y + iconP1.iconOffsets[1];
 		iconP1.visible = showIcons;
 		iconP1.cameras = [camHUD];
 		add(iconP1);
 
 		iconP2 = new HealthIcon(dadIcon, false);
-		iconP2.y = healthBar.y - (iconP2.height / 2) + iconP2Offset.y;
+		if (dadOpponent != null) iconP2.copyFromCharacter(dadOpponent);
+		iconP2.y = healthBar.y - (iconP2.height / 2) + iconP2Offset.y + iconP2.iconOffsets[1];
 		iconP2.visible = showIcons;
 		iconP2.cameras = [camHUD];
 		add(iconP2);
@@ -1846,6 +1756,20 @@ class PlayState extends MusicBeatState
 		}
 	}
 
+	public function setHealthBarColors(p1:Dynamic, p2:Dynamic):Void
+	{
+		var c1:FlxColor = FlxColor.WHITE;
+		var c2:FlxColor = FlxColor.BLACK;
+		if (Std.isOfType(p1, Int)) c1 = cast p1;
+		else if (p1 != null) c1 = FlxColor.fromString(Std.string(p1));
+		if (Std.isOfType(p2, Int)) c2 = cast p2;
+		else if (p2 != null) c2 = FlxColor.fromString(Std.string(p2));
+		updateColors(c1, c2);
+	}
+
+	public function changeHealthBar(?arg0:Dynamic, ?arg1:Dynamic, ?arg2:Dynamic, ?arg3:Dynamic, ?arg4:Dynamic, ?arg5:Dynamic, ?arg6:Dynamic):Void {}
+	public static function changeHealthBarStatic(?arg0:Dynamic, ?arg1:Dynamic, ?arg2:Dynamic, ?arg3:Dynamic, ?arg4:Dynamic, ?arg5:Dynamic, ?arg6:Dynamic):Void {}
+
 	public function updateHUD(elapsed:Float):Void
 	{
 		updateHealthBar(elapsed);
@@ -1899,14 +1823,14 @@ class PlayState extends MusicBeatState
 
 		if (iconP1 != null)
 		{
-			iconP1.x = iconPos - iconOffset + iconP1Offset.x;
-			iconP1.y = healthBar.y - (iconP1.height / 2) + iconP1Offset.y;
+			iconP1.x = iconPos - iconOffset + iconP1Offset.x + iconP1.iconOffsets[0];
+			iconP1.y = healthBar.y - (iconP1.height / 2) + iconP1Offset.y + iconP1.iconOffsets[1];
 		}
 
 		if (iconP2 != null)
 		{
-			iconP2.x = iconPos - (iconP2.width - iconOffset) + iconP2Offset.x;
-			iconP2.y = healthBar.y - (iconP2.height / 2) + iconP2Offset.y;
+			iconP2.x = iconPos - (iconP2.width - iconOffset) + iconP2Offset.x + iconP2.iconOffsets[0];
+			iconP2.y = healthBar.y - (iconP2.height / 2) + iconP2Offset.y + iconP2.iconOffsets[1];
 		}
 	}
 
@@ -2023,10 +1947,6 @@ class PlayState extends MusicBeatState
 
 		detailsSub = scoreBar.text;
 	}
-
-	// =========================================================================
-	// SECTION 7: INPUT HANDLING
-	// =========================================================================
 
 	public function onKeyPress(event:KeyboardEvent):Void
 	{
@@ -2166,10 +2086,6 @@ class PlayState extends MusicBeatState
 		if (controls.UP_R) onKeyRelease(new KeyboardEvent(KeyboardEvent.KEY_UP, true, true, -1, keysArray[2][0]));
 		if (controls.RIGHT_R) onKeyRelease(new KeyboardEvent(KeyboardEvent.KEY_UP, true, true, -1, keysArray[3][0]));
 	}
-
-	// =========================================================================
-	// SECTION 8: CHART & NOTE SYSTEM
-	// =========================================================================
 
 	private function generateSong(dataPath:String):Void
 	{
@@ -2342,6 +2258,11 @@ class PlayState extends MusicBeatState
 									if (targetChar != null && targetChar.trim() != '')
 										precacheCharacter(targetChar.trim());
 								}
+								else if (lowerName == 'change stage' || lowerName == 'changestage')
+								{
+									var rawStage:String = (ev[1] != null) ? Std.string(ev[1]).trim() : '';
+									precacheStage(rawStage);
+								}
 							}
 						}
 					}
@@ -2351,6 +2272,22 @@ class PlayState extends MusicBeatState
 			{
 				var v1:Float = a[0];
 				var v2:Float = b[0];
+				if (Math.abs(v1 - v2) > 2.0)
+				{
+					return (v1 < v2) ? -1 : 1;
+				}
+
+				var nameA:String = (a[1] != null) ? Std.string(a[1]).toLowerCase().trim() : '';
+				var nameB:String = (b[1] != null) ? Std.string(b[1]).toLowerCase().trim() : '';
+				var prioA:Int = (nameA == 'change stage' || nameA == 'changestage') ? -1
+					: ((nameA == 'change character' || nameA == 'changechar') ? 0
+					: ((nameA == 'play anim' || nameA == 'playanim' || nameA == 'play animation' || nameA == 'playanimation') ? 1 : 2));
+				var prioB:Int = (nameB == 'change stage' || nameB == 'changestage') ? -1
+					: ((nameB == 'change character' || nameB == 'changechar') ? 0
+					: ((nameB == 'play anim' || nameB == 'playanim' || nameB == 'play animation' || nameB == 'playanimation') ? 1 : 2));
+				if (prioA != prioB)
+					return prioA - prioB;
+
 				if (v1 < v2) return -1;
 				if (v1 > v2) return 1;
 				return 0;
@@ -2471,6 +2408,19 @@ class PlayState extends MusicBeatState
 			}
 		}
 		generatedMusic = true;
+
+		// Apply any initial (time <= 2.0) Change Stage / Change Character events before snapping initial camera
+		for (ev in eventNotes)
+		{
+			if (ev == null) continue;
+			var evTime:Float = ev[0];
+			if (evTime > 2.0) break;
+			var evName:String = (ev[1] != null) ? Std.string(ev[1]).toLowerCase().trim() : '';
+			if (evName == 'change stage' || evName == 'changestage' || evName == 'change character' || evName == 'changechar')
+			{
+				triggerEvent(ev[1], ev[2], ev[3]);
+			}
+		}
 
 		// Initialize starting camera zoom and focus
 		if (firstZoomEvent != null && firstZoomEvent[0] <= 0)
@@ -2847,10 +2797,6 @@ class PlayState extends MusicBeatState
 		}
 	}
 
-	// =========================================================================
-	// SECTION 9: JUDGEMENTS, SCORING & COMBOS
-	// =========================================================================
-
 	private function goodNoteHit(coolNote:Note, character:Character, characterStrums:Strumline, ?canDisplayJudgement:Bool = true):Void
 	{
 		if (!coolNote.wasGoodHit)
@@ -2931,7 +2877,7 @@ class PlayState extends MusicBeatState
 		if (includeAnimation)
 		{
 			var stringDirection:String = UIStaticArrow.getArrowFromNumber(direction);
-			FlxG.sound.play(Paths.soundRandom('system/miss/missnote', 1, 3), FlxG.random.float(0.1, 0.2));
+			FlxG.sound.play(Paths.soundRandom('miss/missnote', 1, 3), FlxG.random.float(0.1, 0.2));
 			if (character != null)
 			{
 				if (character.ignoreArrows && !character.isAnimFinished())
@@ -3200,10 +3146,6 @@ class PlayState extends MusicBeatState
 		health += (healthBase * (ratingMultiplier / 100));
 	}
 
-	// =========================================================================
-	// SECTION 10: SCRIPTING & SONG EVENTS
-	// =========================================================================
-
 	public function initScripts():Void
 	{
 		#if sys
@@ -3346,6 +3288,11 @@ class PlayState extends MusicBeatState
 		{
 			switch (eventName)
 			{
+			case 'Change Stage' | 'change stage' | 'ChangeStage' | 'changestage':
+				var rawVal1:String = (value1 != null) ? value1.trim() : "";
+				var rawVal2:String = (value2 != null) ? value2.trim() : "";
+				processChangeStageEvent(rawVal1, rawVal2);
+
 			case 'Change Note Skins' | 'change note skins' | 'Change Note Skin':
 				var rawVal1:String = (value1 != null) ? value1.trim().toLowerCase() : "0";
 				var target:Int = 0; // 0 = bf, 1 = dad, 2 = ambos
@@ -4696,175 +4643,114 @@ class PlayState extends MusicBeatState
 		}
 	}
 
+	function getStageAnchorPos(type:Int):Array<Float>
+	{
+		var sd = (stageBuild != null) ? stageBuild.stageData : null;
+		switch (type)
+		{
+			case 0:
+				var x:Float = (sd != null && sd.BF_POS != null && (sd.BF_POS[0] != 0 || sd.BF_POS[1] != 0)) ? sd.BF_POS[0] : 770;
+				var y:Float = (sd != null && sd.BF_POS != null && (sd.BF_POS[0] != 0 || sd.BF_POS[1] != 0)) ? sd.BF_POS[1] : 450;
+				return [x, y];
+			case 2:
+				var x:Float = (sd != null && sd.GF_POS != null && (sd.GF_POS[0] != 0 || sd.GF_POS[1] != 0)) ? sd.GF_POS[0] : 400;
+				var y:Float = (sd != null && sd.GF_POS != null && (sd.GF_POS[0] != 0 || sd.GF_POS[1] != 0)) ? sd.GF_POS[1] : 130;
+				return [x, y];
+			default:
+				var x:Float = (sd != null && sd.DAD_POS != null && (sd.DAD_POS[0] != 0 || sd.DAD_POS[1] != 0)) ? sd.DAD_POS[0] : 100;
+				var y:Float = (sd != null && sd.DAD_POS != null && (sd.DAD_POS[0] != 0 || sd.DAD_POS[1] != 0)) ? sd.DAD_POS[1] : 100;
+				return [x, y];
+		}
+	}
+
 	public function changeCharacter(type:Int, newCharacter:String, ?customX:Null<Float>, ?customY:Null<Float>):Void
 	{
 		if (newCharacter == null || newCharacter.trim() == '') return;
 		newCharacter = newCharacter.trim();
 
+		var anchor = getStageAnchorPos(type);
+		var baseX:Float = anchor[0] + (customX != null ? customX : 0);
+		var baseY:Float = anchor[1] + (customY != null ? customY : 0);
+
 		switch (type)
 		{
 			case 0: // Boyfriend
-				var defaultX:Float = stageBuild != null && stageBuild.stageData != null ? stageBuild.stageData.BF_POS[0] : 770;
-				var defaultY:Float = stageBuild != null && stageBuild.stageData != null ? stageBuild.stageData.BF_POS[1] : 100;
-				var prevBase:Array<Float> = characterPositions.exists(boyfriend.curCharacter) ? characterPositions.get(boyfriend.curCharacter) : [defaultX, defaultY];
+				if (boyfriend == null) return;
+				boyfriend.adjustPos = false;
+				characterPositions.set(newCharacter, [baseX, baseY]);
 
 				if (boyfriend.curCharacter == newCharacter)
 				{
-					if (customX != null || customY != null)
-					{
-						var targetBaseX:Float = customX != null ? customX : prevBase[0];
-						var targetBaseY:Float = customY != null ? customY : prevBase[1];
-						boyfriend.x = targetBaseX + boyfriend.characterData.offsetX;
-						boyfriend.y = boyfriend.adjustPos ? (targetBaseY + (boyfriend.characterData.offsetY - (boyfriend.frameHeight * boyfriend.scale.y))) : (targetBaseY + boyfriend.characterData.offsetY);
-						characterPositions.set(newCharacter, [targetBaseX, targetBaseY]);
-						if (stageBuild != null && stageBuild.stageData != null)
-							stageBuild.stageData.BF_POS = [targetBaseX, targetBaseY];
-					}
+					boyfriend.x = baseX + (boyfriend.characterData != null ? boyfriend.characterData.offsetX : 0);
+					boyfriend.y = baseY + (boyfriend.characterData != null ? boyfriend.characterData.offsetY : 0);
+					boyfriend.updateHitbox();
+					cacheCharacterCameraPoints();
+					if (!lockCamPos && !lockFocus) updateCamFollow();
 					return;
 				}
 
-				// Salva a posição base do personagem que estava ativo antes
-				characterPositions.set(boyfriend.curCharacter, [prevBase[0], prevBase[1]]);
-
-				var baseX:Float;
-				var baseY:Float;
-
-				if (customX != null || customY != null)
-				{
-					var remembered = characterPositions.exists(newCharacter) ? characterPositions.get(newCharacter) : prevBase;
-					baseX = customX != null ? customX : remembered[0];
-					baseY = customY != null ? customY : remembered[1];
-				}
-				else if (characterPositions.exists(newCharacter))
-				{
-					// Lembra a posição do personagem se ele já apareceu antes
-					var remembered = characterPositions.get(newCharacter);
-					baseX = remembered[0];
-					baseY = remembered[1];
-				}
-				else
-				{
-					// Se for a primeira vez e não especificou coordenadas, herda a posição do personagem anterior
-					baseX = prevBase[0];
-					baseY = prevBase[1];
-				}
-
-				characterPositions.set(newCharacter, [baseX, baseY]);
-				if (stageBuild != null && stageBuild.stageData != null && (customX != null || customY != null))
-					stageBuild.stageData.BF_POS = [baseX, baseY];
-
 				boyfriend.setCharacter(baseX, baseY, newCharacter);
+				boyfriend.adjustPos = false;
+				boyfriend.updateHitbox();
 				boyfriend.dance();
 				if (iconP1 != null)
-					iconP1.changeIcon(boyfriend.healthIcon);
+				{
+					iconP1.changeIcon(boyfriend.healthIcon, boyfriend);
+					iconP1.copyFromCharacter(boyfriend);
+				}
 				var bfColor = FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]);
 				updateColors(bfColor, currentColorP2);
 
 			case 1: // Dad / Opponent
-				var defaultX:Float = stageBuild != null && stageBuild.stageData != null ? stageBuild.stageData.DAD_POS[0] : 100;
-				var defaultY:Float = stageBuild != null && stageBuild.stageData != null ? stageBuild.stageData.DAD_POS[1] : 100;
-				var prevBase:Array<Float> = characterPositions.exists(dadOpponent.curCharacter) ? characterPositions.get(dadOpponent.curCharacter) : [defaultX, defaultY];
+				if (dadOpponent == null) return;
+				dadOpponent.adjustPos = false;
+				characterPositions.set(newCharacter, [baseX, baseY]);
 
 				if (dadOpponent.curCharacter == newCharacter)
 				{
-					if (customX != null || customY != null)
-					{
-						var targetBaseX:Float = customX != null ? customX : prevBase[0];
-						var targetBaseY:Float = customY != null ? customY : prevBase[1];
-						dadOpponent.x = targetBaseX + dadOpponent.characterData.offsetX;
-						dadOpponent.y = dadOpponent.adjustPos ? (targetBaseY + (dadOpponent.characterData.offsetY - (dadOpponent.frameHeight * dadOpponent.scale.y))) : (targetBaseY + dadOpponent.characterData.offsetY);
-						characterPositions.set(newCharacter, [targetBaseX, targetBaseY]);
-						if (stageBuild != null && stageBuild.stageData != null)
-							stageBuild.stageData.DAD_POS = [targetBaseX, targetBaseY];
-					}
+					dadOpponent.x = baseX + (dadOpponent.characterData != null ? dadOpponent.characterData.offsetX : 0);
+					dadOpponent.y = baseY + (dadOpponent.characterData != null ? dadOpponent.characterData.offsetY : 0);
+					dadOpponent.updateHitbox();
+					cacheCharacterCameraPoints();
+					if (!lockCamPos && !lockFocus) updateCamFollow();
 					return;
 				}
 
-				characterPositions.set(dadOpponent.curCharacter, [prevBase[0], prevBase[1]]);
-
-				var baseX:Float;
-				var baseY:Float;
-
-				if (customX != null || customY != null)
-				{
-					var remembered = characterPositions.exists(newCharacter) ? characterPositions.get(newCharacter) : prevBase;
-					baseX = customX != null ? customX : remembered[0];
-					baseY = customY != null ? customY : remembered[1];
-				}
-				else if (characterPositions.exists(newCharacter))
-				{
-					var remembered = characterPositions.get(newCharacter);
-					baseX = remembered[0];
-					baseY = remembered[1];
-				}
-				else
-				{
-					baseX = prevBase[0];
-					baseY = prevBase[1];
-				}
-
-				characterPositions.set(newCharacter, [baseX, baseY]);
-				if (stageBuild != null && stageBuild.stageData != null && (customX != null || customY != null))
-					stageBuild.stageData.DAD_POS = [baseX, baseY];
-
 				dadOpponent.setCharacter(baseX, baseY, newCharacter);
+				dadOpponent.adjustPos = false;
+				dadOpponent.updateHitbox();
 				dadOpponent.dance();
 				if (iconP2 != null)
-					iconP2.changeIcon(dadOpponent.healthIcon);
+				{
+					iconP2.changeIcon(dadOpponent.healthIcon, dadOpponent);
+					iconP2.copyFromCharacter(dadOpponent);
+				}
 				var dadColor = FlxColor.fromRGB(dadOpponent.healthColorArray[0], dadOpponent.healthColorArray[1], dadOpponent.healthColorArray[2]);
 				updateColors(currentColorP1, dadColor);
 
 			case 2: // GF
-				var defaultX:Float = stageBuild != null && stageBuild.stageData != null ? stageBuild.stageData.GF_POS[0] : 400;
-				var defaultY:Float = stageBuild != null && stageBuild.stageData != null ? stageBuild.stageData.GF_POS[1] : 130;
-				var prevBase:Array<Float> = characterPositions.exists(gf.curCharacter) ? characterPositions.get(gf.curCharacter) : [defaultX, defaultY];
+				if (gf == null) return;
+				gf.adjustPos = false;
+				characterPositions.set(newCharacter, [baseX, baseY]);
 
 				if (gf.curCharacter == newCharacter)
 				{
-					if (customX != null || customY != null)
-					{
-						var targetBaseX:Float = customX != null ? customX : prevBase[0];
-						var targetBaseY:Float = customY != null ? customY : prevBase[1];
-						gf.x = targetBaseX + gf.characterData.offsetX;
-						gf.y = gf.adjustPos ? (targetBaseY + (gf.characterData.offsetY - (gf.frameHeight * gf.scale.y))) : (targetBaseY + gf.characterData.offsetY);
-						characterPositions.set(newCharacter, [targetBaseX, targetBaseY]);
-						if (stageBuild != null && stageBuild.stageData != null)
-							stageBuild.stageData.GF_POS = [targetBaseX, targetBaseY];
-					}
+					gf.x = baseX + (gf.characterData != null ? gf.characterData.offsetX : 0);
+					gf.y = baseY + (gf.characterData != null ? gf.characterData.offsetY : 0);
+					gf.updateHitbox();
+					cacheCharacterCameraPoints();
+					if (!lockCamPos && !lockFocus) updateCamFollow();
 					return;
 				}
 
-				characterPositions.set(gf.curCharacter, [prevBase[0], prevBase[1]]);
-
-				var baseX:Float;
-				var baseY:Float;
-
-				if (customX != null || customY != null)
-				{
-					var remembered = characterPositions.exists(newCharacter) ? characterPositions.get(newCharacter) : prevBase;
-					baseX = customX != null ? customX : remembered[0];
-					baseY = customY != null ? customY : remembered[1];
-				}
-				else if (characterPositions.exists(newCharacter))
-				{
-					var remembered = characterPositions.get(newCharacter);
-					baseX = remembered[0];
-					baseY = remembered[1];
-				}
-				else
-				{
-					baseX = prevBase[0];
-					baseY = prevBase[1];
-				}
-
-				characterPositions.set(newCharacter, [baseX, baseY]);
-				if (stageBuild != null && stageBuild.stageData != null && (customX != null || customY != null))
-					stageBuild.stageData.GF_POS = [baseX, baseY];
-
 				gf.setCharacter(baseX, baseY, newCharacter);
+				gf.adjustPos = false;
+				gf.updateHitbox();
 				gf.dance();
 		}
 		cacheCharacterCameraPoints();
+		if (!lockCamPos && !lockFocus)
+			updateCamFollow();
 	}
 
 	public static function precacheCharacter(charName:String):Void
@@ -4896,9 +4782,585 @@ class PlayState extends MusicBeatState
 		#end
 	}
 
-	// =========================================================================
-	// SECTION 11: SONG FLOW & SUBSTATES
-	// =========================================================================
+	/**
+	 * Returns available stages for the current game context.
+	 * If running inside a mod, strictly limits stages to the mod's stages folders ('stages' and 'data/stages').
+	 */
+	public static function getAvailableStages():Array<String>
+	{
+		var modName:String = null;
+		var inMod:Bool = false;
+
+		#if sys
+		if (SONG != null && SONG.chartPath != null)
+		{
+			var norm:String = SONG.chartPath.replace('\\', '/');
+			if (norm.startsWith('mods/'))
+			{
+				inMod = true;
+				var parts:Array<String> = norm.split('/');
+				if (parts.length > 2 && parts[1] != 'songs' && parts[1] != 'data')
+					modName = parts[1];
+			}
+		}
+
+		if (!inMod && core.scripting.Mods.currentModDirectory != null)
+		{
+			var cur:String = core.scripting.Mods.currentModDirectory.trim();
+			if (cur != '' && cur.toLowerCase() != 'none')
+			{
+				if (sys.FileSystem.exists('mods/' + cur))
+				{
+					if (sys.FileSystem.exists('mods/' + cur + '/stages')
+						|| sys.FileSystem.exists('mods/' + cur + '/data/stages')
+						|| sys.FileSystem.exists('mods/' + cur + '/songs'))
+					{
+						inMod = true;
+						modName = cur;
+					}
+				}
+			}
+		}
+
+		// Also check if current stage is located in a mod
+		if (!inMod && curStage != null && curStage != '')
+		{
+			var checkDirs:Array<String> = ['mods/stages', 'mods/data/stages'];
+			if (modName != null)
+			{
+				checkDirs.push('mods/' + modName + '/stages');
+				checkDirs.push('mods/' + modName + '/data/stages');
+			}
+			for (m in core.scripting.Mods.getModDirectories())
+			{
+				checkDirs.push('mods/' + m + '/stages');
+				checkDirs.push('mods/' + m + '/data/stages');
+			}
+			for (cd in checkDirs)
+			{
+				if (sys.FileSystem.exists(cd + '/' + curStage + '.json') || sys.FileSystem.exists(cd + '/' + curStage + '.hx'))
+				{
+					inMod = true;
+					if (cd.startsWith('mods/') && cd.split('/').length > 2)
+						modName = cd.split('/')[1];
+					break;
+				}
+			}
+		}
+		#end
+
+		return CoolUtil.getStageList(inMod, modName);
+	}
+
+	/**
+	 * Returns a random stage name available for the current context.
+	 * If running inside a mod, it strictly limits choices to that mod's stages.
+	 * If excludeCurrent is supplied and more than one stage is available, avoids picking excludeCurrent.
+	 */
+	public static function getRandomStage(?excludeCurrent:String):String
+	{
+		var allStages:Array<String> = getAvailableStages();
+		if (allStages == null || allStages.length == 0)
+			return (curStage != null && curStage != '') ? curStage : 'stage';
+
+		if (excludeCurrent == null && curStage != null && curStage != '')
+			excludeCurrent = curStage;
+
+		var normExclude:String = (excludeCurrent != null) ? excludeCurrent.trim().toLowerCase() : null;
+
+		var candidates:Array<String> = [];
+		for (st in allStages)
+		{
+			if (st == null || st.trim() == '') continue;
+			var clean = st.trim();
+			if (normExclude == null || allStages.length <= 1 || clean.toLowerCase() != normExclude)
+			{
+				candidates.push(clean);
+			}
+		}
+
+		if (candidates.length == 0)
+			candidates = allStages;
+
+		var picked:String = FlxG.random.getObject(candidates);
+		return (picked != null && picked.trim() != '') ? picked.trim() : 'stage';
+	}
+
+	/**
+	 * Pre-caches stage assets / scripts to prevent hitches during gameplay stage switches.
+	 * Supports specific stage names, comma/pipe-separated lists, or 'random' / 'aleatorio'.
+	 */
+	public static function precacheStage(stageName:String):Void
+	{
+		if (stageName == null) return;
+		stageName = stageName.trim();
+		if (stageName == '')
+		{
+			var all = getAvailableStages();
+			for (st in all)
+				precacheSingleStage(st);
+			return;
+		}
+
+		var low:String = stageName.toLowerCase();
+		if (low == 'random' || low == 'aleatorio' || low == 'aleatório' || low == 'rnd' || low == '?')
+		{
+			var all = getAvailableStages();
+			for (st in all)
+				precacheSingleStage(st);
+			return;
+		}
+
+		if (stageName.indexOf(',') != -1 || stageName.indexOf('|') != -1)
+		{
+			var cleanStr = StringTools.replace(stageName, '|', ',');
+			var parts = cleanStr.split(',');
+			for (p in parts)
+			{
+				var tr = p.trim();
+				if (tr != '')
+					precacheStage(tr);
+			}
+			return;
+		}
+
+		precacheSingleStage(stageName);
+	}
+
+	public static function precacheSingleStage(stageName:String):Void
+	{
+		if (stageName == null || stageName.trim() == '') return;
+		stageName = stageName.trim();
+
+		// If PlayState is currently running, pre-warm the Stage directly into stageCache
+		if (PlayState.instance != null && PlayState.instance.stageCache != null)
+		{
+			try
+			{
+				PlayState.instance.getOrLoadStage(stageName);
+				return;
+			}
+			catch (e:Dynamic)
+			{
+				trace('Could not pre-warm stage in instance: ' + stageName + ' - ' + e);
+			}
+		}
+
+		#if sys
+		try
+		{
+			// Preload stage images using Paths.stageImage
+			Paths.stageImage('stageback', stageName);
+			Paths.stageImage('stagefront', stageName);
+			Paths.stageImage('stagecurtains', stageName);
+
+			var scriptCandidates = [
+				'data/stages/' + stageName + '/script.hxc',
+				'data/stages/' + stageName + '/script.hx',
+				'data/stages/' + stageName + '/' + stageName + '.hxc',
+				'data/stages/' + stageName + '/' + stageName + '.hx',
+				'data/stages/' + stageName + '.hxc',
+				'data/stages/' + stageName + '.hx',
+				'stages/' + stageName + '/script.hxc',
+				'stages/' + stageName + '/script.hx',
+				'stages/' + stageName + '/' + stageName + '.hxc',
+				'stages/' + stageName + '/' + stageName + '.hx',
+				'stages/' + stageName + '.hxc',
+				'stages/' + stageName + '.hx'
+			];
+
+			var scriptPath:String = null;
+			for (cand in scriptCandidates)
+			{
+				var p = Paths.getPath(cand, TEXT);
+				if (sys.FileSystem.exists(p))
+				{
+					scriptPath = p;
+					break;
+				}
+			}
+
+			if (scriptPath != null && sys.FileSystem.exists(scriptPath))
+			{
+				var content = sys.io.File.getContent(scriptPath);
+				var r = ~/['"]([^'"]+\/(?:[a-zA-Z0-9_\-\.]+))['"]/g;
+				var str = content;
+				while (r.match(str))
+				{
+					var match = r.matched(1);
+					if (match != null && (match.contains('backgrounds') || match.contains('stage') || match.endsWith('.png') || match.endsWith('.webp')))
+					{
+						var cleanKey = match;
+						if (cleanKey.endsWith('.png')) cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+						else if (cleanKey.endsWith('.webp')) cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+						Paths.returnGraphic(cleanKey, null, true);
+					}
+					str = r.matchedRight();
+				}
+			}
+
+			var jsonCandidates = [
+				'data/stages/' + stageName + '/stage.json',
+				'data/stages/' + stageName + '/' + stageName + '.json',
+				'data/stages/' + stageName + '.json',
+				'stages/' + stageName + '/stage.json',
+				'stages/' + stageName + '/' + stageName + '.json',
+				'stages/' + stageName + '.json'
+			];
+
+			var jsonPath:String = null;
+			for (cand in jsonCandidates)
+			{
+				var p = Paths.getPath(cand, TEXT);
+				if (sys.FileSystem.exists(p))
+				{
+					jsonPath = p;
+					break;
+				}
+			}
+			if (sys.FileSystem.exists(jsonPath))
+			{
+				var content = sys.io.File.getContent(jsonPath);
+				var r = ~/['"]([^'"]+\/(?:[a-zA-Z0-9_\-\.]+))['"]/g;
+				var str = content;
+				while (r.match(str))
+				{
+					var match = r.matched(1);
+					if (match != null && (match.contains('backgrounds') || match.contains('stage') || match.endsWith('.png') || match.endsWith('.webp')))
+					{
+						var cleanKey = match;
+						if (cleanKey.endsWith('.png')) cleanKey = cleanKey.substr(0, cleanKey.length - 4);
+						else if (cleanKey.endsWith('.webp')) cleanKey = cleanKey.substr(0, cleanKey.length - 5);
+						Paths.returnGraphic(cleanKey, null, true);
+					}
+					str = r.matchedRight();
+				}
+			}
+		}
+		catch (e:Dynamic)
+		{
+			trace('Could not precache stage assets: ' + stageName + ' - ' + e);
+		}
+		#end
+	}
+
+	/**
+	 * Retrieves an existing Stage from stageCache or instantiates and pre-warms it without rendering.
+	 */
+	public function getOrLoadStage(stageName:String):Stage
+	{
+		if (stageName == null || stageName.trim() == '')
+			stageName = 'stage';
+		stageName = stageName.trim();
+
+		if (stageCache == null)
+			stageCache = new Map<String, Stage>();
+
+		if (stageCache.exists(stageName))
+			return stageCache.get(stageName);
+
+		var newStage = new Stage(stageName);
+
+		#if sys
+		initStageVariables(newStage);
+		newStage.callScript('onCreatePost', []);
+		newStage.callScript('postCreate', []);
+		#end
+
+		newStage.background.visible = false;
+		newStage.background.active = false;
+		newStage.foreground.visible = false;
+		newStage.foreground.active = false;
+
+		stageCache.set(stageName, newStage);
+		return newStage;
+	}
+
+	/**
+	 * Injects all state variables, helper functions, and camera references into the stage script interpreter.
+	 */
+	public function initStageVariables(targetStage:Stage):Void
+	{
+		#if sys
+		if (targetStage == null) return;
+		if (targetStage.script != null) {
+			targetStage.script.loadPlayStateVariables(this, targetStage);
+		}
+		#end
+	}
+
+	/**
+	 * Seamlessly swaps the background and foreground sprite groups of oldStage and newStage
+	 * in FlxState.members to maintain exact draw order without rebuilding display trees.
+	 */
+	public function replaceStageInMembers(oldStage:Stage, newStage:Stage):Void
+	{
+		if (oldStage == newStage) return;
+
+		if (oldStage != null)
+		{
+			oldStage.background.visible = false;
+			oldStage.background.active = false;
+			oldStage.foreground.visible = false;
+			oldStage.foreground.active = false;
+		}
+
+		newStage.background.visible = true;
+		newStage.background.active = true;
+		newStage.foreground.visible = true;
+		newStage.foreground.active = true;
+
+		var bgIdx:Int = (oldStage != null) ? members.indexOf(oldStage.background) : -1;
+		if (bgIdx != -1)
+		{
+			remove(oldStage.background, true);
+			insert(bgIdx, newStage.background);
+		}
+		else if (members.indexOf(newStage.background) == -1)
+		{
+			var charIdx = members.indexOf(gf != null ? gf : (dadOpponent != null ? dadOpponent : boyfriend));
+			if (charIdx != -1)
+				insert(charIdx, newStage.background);
+			else
+				add(newStage.background);
+		}
+
+		var fgIdx:Int = (oldStage != null) ? members.indexOf(oldStage.foreground) : -1;
+		if (fgIdx != -1)
+		{
+			remove(oldStage.foreground, true);
+			insert(fgIdx, newStage.foreground);
+		}
+		else if (members.indexOf(newStage.foreground) == -1)
+		{
+			var bfIdx = members.indexOf(boyfriend);
+			if (bfIdx != -1)
+				insert(bfIdx + 1, newStage.foreground);
+			else
+				add(newStage.foreground);
+		}
+	}
+
+	/**
+	 * Repositions boyfriend, dad, and gf to match the active stage's anchors.
+	 */
+	public function repositionCharactersToStage():Void
+	{
+		if (stageBuild != null && boyfriend != null && dadOpponent != null && gf != null)
+		{
+			if (camPos == null) camPos = new FlxPoint(0, 0);
+			stageBuild.dadPosition(curStage, boyfriend, dadOpponent, gf, camPos);
+			stageBuild.repositionPlayers(curStage, boyfriend, dadOpponent, gf);
+			boyfriend.updateHitbox();
+			dadOpponent.updateHitbox();
+			gf.updateHitbox();
+		}
+	}
+
+	/**
+	 * Parses and dispatches the 'Change Stage' event parameters.
+	 */
+	public function processChangeStageEvent(value1:String, value2:String):Void
+	{
+		var rawV1:String = (value1 != null) ? value1.trim() : "";
+		var rawV2:String = (value2 != null) ? value2.trim() : "";
+
+		var targetStage:String = rawV1;
+		var lowV1:String = rawV1.toLowerCase();
+
+		// Handle random / aleatorio option
+		if (rawV1 == "" || lowV1 == "random" || lowV1 == "aleatorio" || lowV1 == "aleatório" || lowV1 == "rnd" || lowV1 == "?")
+		{
+			targetStage = getRandomStage(curStage);
+		}
+		else if (lowV1.startsWith("random:") || lowV1.startsWith("rnd:") || rawV1.contains("|"))
+		{
+			var poolStr = rawV1;
+			if (lowV1.startsWith("random:")) poolStr = rawV1.substring(7);
+			else if (lowV1.startsWith("rnd:")) poolStr = rawV1.substring(4);
+			poolStr = StringTools.replace(poolStr, "|", ",");
+			var pool:Array<String> = [];
+			for (item in poolStr.split(","))
+			{
+				var t = item.trim();
+				if (t != "") pool.push(t);
+			}
+			if (pool.length > 0)
+			{
+				var curLow = (curStage != null) ? curStage.trim().toLowerCase() : "";
+				var candidates = pool.filter(function(s) return s != null && s.trim().toLowerCase() != curLow);
+				if (candidates.length == 0) candidates = pool;
+				targetStage = FlxG.random.getObject(candidates);
+			}
+			else
+			{
+				targetStage = getRandomStage(curStage);
+			}
+		}
+
+		if (targetStage == null || targetStage.trim() == "")
+			targetStage = "stage";
+		targetStage = targetStage.trim();
+
+		// Parse value2 options
+		var reposition:Bool = true;
+		var changeZoom:Bool = true;
+		var customZoom:Null<Float> = null;
+		var doSnap:Bool = false;
+		var doFlash:Bool = false;
+		var flashColor:FlxColor = FlxColor.WHITE;
+		var flashDuration:Float = 0.35;
+
+		if (rawV2 != "")
+		{
+			var cleanV2 = StringTools.replace(rawV2.toLowerCase(), "&", ",");
+			var v2Tokens = cleanV2.split(",");
+			for (tok in v2Tokens)
+			{
+				var t = tok.trim();
+				if (t == "norepos" || t == "no-repos" || t == "stay" || t == "dontreposition" || t == "keep-pos" || t == "keeppos")
+				{
+					reposition = false;
+				}
+				else if (t == "nozoom" || t == "keepzoom" || t == "no-zoom" || t == "keep-zoom")
+				{
+					changeZoom = false;
+				}
+				else if (t == "snap" || t == "instant")
+				{
+					doSnap = true;
+				}
+				else if (t == "flash" || t == "flashwhite" || t == "flash-white")
+				{
+					doFlash = true;
+					flashColor = FlxColor.WHITE;
+				}
+				else if (t == "flashblack" || t == "flash-black")
+				{
+					doFlash = true;
+					flashColor = FlxColor.BLACK;
+				}
+				else if (t.startsWith("zoom:"))
+				{
+					var pz = Std.parseFloat(t.substring(5).trim());
+					if (!Math.isNaN(pz) && pz > 0) customZoom = pz;
+				}
+				else
+				{
+					var pNum = Std.parseFloat(t);
+					if (!Math.isNaN(pNum) && pNum > 0)
+					{
+						customZoom = pNum;
+					}
+				}
+			}
+		}
+
+		if (!changeZoom)
+			customZoom = defaultCamZoom;
+
+		changeStage(targetStage, reposition, customZoom);
+
+		if (doFlash && camGame != null)
+		{
+			camGame.flash(flashColor, flashDuration);
+		}
+
+		if (doSnap)
+		{
+			snapCamera();
+		}
+	}
+
+	/**
+	 * High-performance stage switch. Swaps cached stages with zero memory reallocations,
+	 * zero texture reloading, and zero GC stutter.
+	 */
+	public function changeStage(targetStage:String, repositionCharacters:Bool = true, ?customZoom:Null<Float> = null):Void
+	{
+		if (targetStage == null || targetStage.trim() == "") return;
+		targetStage = targetStage.trim();
+
+		var lowTarget:String = targetStage.toLowerCase();
+		if (lowTarget == "random" || lowTarget == "aleatorio" || lowTarget == "aleatório" || lowTarget == "rnd" || lowTarget == "?")
+		{
+			targetStage = getRandomStage(curStage);
+		}
+
+		if (curStage == targetStage && stageBuild != null)
+		{
+			if (repositionCharacters)
+			{
+				repositionCharactersToStage();
+				cacheCharacterCameraPoints();
+				updateCamFollow();
+			}
+			return;
+		}
+
+		var oldStage:Stage = stageBuild;
+		var oldStageName:String = curStage;
+
+		// 1. Retrieve or pre-warm new stage
+		var newStage:Stage = getOrLoadStage(targetStage);
+		if (newStage == null)
+		{
+			FlxG.log.warn("Could not load stage: " + targetStage);
+			return;
+		}
+
+		// 2. Notify old stage of exit
+		if (oldStage != null)
+		{
+			oldStage.callScript("onStageExit", [oldStageName, targetStage]);
+			oldStage.callScript("stageExit", []);
+		}
+
+		// 3. Swap display groups directly in members
+		replaceStageInMembers(oldStage, newStage);
+
+		// 4. Update stage references
+		stageBuild = newStage;
+		curStage = targetStage;
+		PlayState.curStage = targetStage;
+		Paths.currentStage = targetStage;
+
+		// 5. Reposition characters
+		if (repositionCharacters)
+		{
+			repositionCharactersToStage();
+		}
+		else if (stageBuild.stageData != null && gf != null)
+		{
+			gf.visible = !stageBuild.stageData.GF_HIDE;
+		}
+
+		// 7. Update camera zoom
+		if (customZoom != null && !Math.isNaN(customZoom) && customZoom > 0)
+		{
+			defaultCamZoom = customZoom;
+			camGame.zoom = customZoom;
+			if (camGame2 != null) camGame2.zoom = customZoom;
+		}
+		else if (stageBuild.stageData != null && stageBuild.stageData.zoom > 0)
+		{
+			defaultCamZoom = stageBuild.stageData.zoom;
+			camGame.zoom = defaultCamZoom;
+			if (camGame2 != null) camGame2.zoom = defaultCamZoom;
+		}
+
+		// 8. Update camera tracking points
+		cacheCharacterCameraPoints();
+		updateCamFollow();
+
+		// 9. Notify new stage of entry
+		stageBuild.callScript("onStageEnter", [oldStageName, targetStage]);
+		stageBuild.callScript("stageEnter", []);
+
+		// 10. General script callback
+		callOnScripts('onChangeStage', [targetStage, oldStageName]);
+		callOnScripts('onStageChange', [targetStage, oldStageName]);
+	}
 
 	public function startCountdown():Void
 	{
@@ -5256,8 +5718,16 @@ class PlayState extends MusicBeatState
 			healthBar.updateBar();
 		}
 		updateScoreText();
-		if (boyfriend != null && iconP1 != null) iconP1.changeIcon(boyfriend.healthIcon);
-		if (dadOpponent != null && iconP2 != null) iconP2.changeIcon(dadOpponent.healthIcon);
+		if (boyfriend != null && iconP1 != null)
+		{
+			iconP1.changeIcon(boyfriend.healthIcon, boyfriend);
+			iconP1.copyFromCharacter(boyfriend);
+		}
+		if (dadOpponent != null && iconP2 != null)
+		{
+			iconP2.changeIcon(dadOpponent.healthIcon, dadOpponent);
+			iconP2.copyFromCharacter(dadOpponent);
+		}
 		var bfColor = (boyfriend != null) ? FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]) : FlxColor.WHITE;
 		var dadColor = (dadOpponent != null) ? FlxColor.fromRGB(dadOpponent.healthColorArray[0], dadOpponent.healthColorArray[1], dadOpponent.healthColorArray[2]) : FlxColor.WHITE;
 		updateColors(bfColor, dadColor);
@@ -5293,7 +5763,7 @@ class PlayState extends MusicBeatState
 		startCountdown();
 	}
 
-	private function endSong():Void
+	public function endSong():Void
 	{
 		if (endingSong) return;
 		endingSong = true;
@@ -5357,7 +5827,7 @@ class PlayState extends MusicBeatState
 		}
 	}
 
-	private function callDefaultSongEnd():Void
+	public function callDefaultSongEnd():Void
 	{
 		if (storyPlaylist != null && storyPlaylist.length > 0)
 			storyPlaylist.shift();
@@ -5404,10 +5874,6 @@ class PlayState extends MusicBeatState
 		}
 		#end
 	}
-
-	// =========================================================================
-	// SECTION 12: OVERRIDES & UTILITIES
-	// =========================================================================
 
 	override function add(Object:FlxBasic):FlxBasic
 	{

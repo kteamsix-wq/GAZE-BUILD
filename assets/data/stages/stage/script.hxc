@@ -1,0 +1,14 @@
+var wall:FlxSprite;
+var floor:FlxSprite;
+var curtains:FlxSprite;
+
+function create() {
+    wall = new FlxSprite(0, 0).loadGraphic(Paths.stageImage('stageback'));
+    add(wall);
+
+    floor = new FlxSprite(0, 0).loadGraphic(Paths.stageImage('stagefront'));
+    add(floor);
+
+    curtains = new FlxSprite(0, 0).loadGraphic(Paths.stageImage('stagecurtains'));
+    foreground.add(curtains);
+}

@@ -1,4 +1,4 @@
-﻿package gameplay.dialogue;
+package gameplay.dialogue;
 
 import flixel.FlxBasic;
 import flixel.FlxG;
@@ -458,7 +458,7 @@ class DialogueBox extends FlxSpriteGroup
 				}
 				else
 				{
-					eventImage.loadGraphic(Paths.file(_sprite + ".png"));
+					eventImage.loadGraphic(Paths.image(_sprite));
 				}
 
 				eventImage.scale.set(_scaleX, _scaleY);

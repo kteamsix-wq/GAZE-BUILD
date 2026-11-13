@@ -1,4 +1,4 @@
-﻿package menus;
+package menus;
 
 import flixel.util.FlxColor;
 import haxe.Json;
@@ -15,6 +15,7 @@ typedef WeekSongData =
 	var name:String;
 	var character:String;
 	var color:FlxColor;
+	var ?hideFreeplay:Bool;
 }
 
 class WeekData
@@ -26,6 +27,7 @@ class WeekData
 	public var weekIndex:Int;
 	public var startUnlocked:Bool;
 	public var hideStoryMode:Bool;
+	public var hideFreeplay:Bool;
 
 	public function new(id:String, weekIndex:Int)
 	{
@@ -36,6 +38,7 @@ class WeekData
 		this.freeplayColor = FlxColor.WHITE;
 		this.startUnlocked = true;
 		this.hideStoryMode = false;
+		this.hideFreeplay = false;
 	}
 
 	public static function loadWeeks():Array<WeekData>
@@ -107,6 +110,7 @@ class WeekData
 		week.freeplayColor = readColor(Reflect.field(json, 'freeplayColor'), FlxColor.WHITE);
 		week.startUnlocked = readBool(Reflect.field(json, 'startUnlocked'), true);
 		week.hideStoryMode = readBool(Reflect.field(json, 'hideStoryMode'), false);
+		week.hideFreeplay = readBool(Reflect.field(json, 'hideFreeplay'), false);
 
 		var jsonSongs:Dynamic = Reflect.field(json, 'songs');
 		if (jsonSongs == null || !Std.isOfType(jsonSongs, Array))
@@ -130,6 +134,7 @@ class WeekData
 		var name:String = null;
 		var character:String = 'gf';
 		var color:FlxColor = fallbackColor;
+		var songHideFreeplay:Bool = false;
 
 		if (Std.isOfType(entry, Array))
 		{
@@ -140,6 +145,8 @@ class WeekData
 				character = Std.string(values[1]);
 			if (values.length > 2)
 				color = readColor(values[2], fallbackColor);
+			if (values.length > 3 && values[3] != null)
+				songHideFreeplay = readBool(values[3], false);
 		}
 		else
 		{
@@ -151,6 +158,8 @@ class WeekData
 			if (Reflect.field(entry, 'character') != null)
 				character = Std.string(Reflect.field(entry, 'character'));
 			color = readColor(Reflect.field(entry, 'color'), fallbackColor);
+			if (Reflect.field(entry, 'hideFreeplay') != null)
+				songHideFreeplay = readBool(Reflect.field(entry, 'hideFreeplay'), false);
 		}
 
 		if (name == null || name.length == 0 || name == 'null')
@@ -159,7 +168,8 @@ class WeekData
 		return {
 			name: name,
 			character: character,
-			color: color
+			color: color,
+			hideFreeplay: songHideFreeplay
 		};
 	}
 

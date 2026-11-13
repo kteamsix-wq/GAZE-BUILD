@@ -1,4 +1,4 @@
-﻿package gameplay;
+package gameplay;
 
 import gameplay.chart.Song.SwagSong;
 import flixel.sound.FlxSound;
@@ -99,14 +99,24 @@ class Conductor
 	{
 		bpmChangeMap = [];
 
-		var curBPM:Float = song.bpm;
+		var curBPM:Float = (song != null && song.bpm > 0) ? song.bpm : bpm;
 		var totalSteps:Int = 0;
 		var totalPos:Float = 0;
 
+		var initSC:Float = ((60 / curBPM) * 1000) / 4;
 		defaultBPMChange.bpm = curBPM;
-		defaultBPMChange.stepCrochet = ((60 / curBPM) * 1000) / 4;
+		defaultBPMChange.stepCrochet = initSC;
+		defaultBPMChange.stepTime = 0;
+		defaultBPMChange.songTime = 0;
 
-		if (song.notes == null)
+		bpmChangeMap.push({
+			stepTime: 0,
+			songTime: 0,
+			bpm: curBPM,
+			stepCrochet: initSC
+		});
+
+		if (song == null || song.notes == null)
 		{
 			currentBPMChangeIndex = 0;
 			return;
@@ -114,19 +124,31 @@ class Conductor
 
 		for (i in 0...song.notes.length)
 		{
-			if (song.notes[i].changeBPM && song.notes[i].bpm != curBPM)
+			if (song.notes[i] == null) continue;
+
+			if (song.notes[i].changeBPM && song.notes[i].bpm > 0 && song.notes[i].bpm != curBPM)
 			{
 				curBPM = song.notes[i].bpm;
 				var sc:Float = ((60 / curBPM) * 1000) / 4;
-				bpmChangeMap.push({
-					stepTime: totalSteps,
-					songTime: totalPos,
-					bpm: curBPM,
-					stepCrochet: sc
-				});
+				if (totalSteps == 0 && bpmChangeMap.length > 0)
+				{
+					bpmChangeMap[0].bpm = curBPM;
+					bpmChangeMap[0].stepCrochet = sc;
+					defaultBPMChange.bpm = curBPM;
+					defaultBPMChange.stepCrochet = sc;
+				}
+				else
+				{
+					bpmChangeMap.push({
+						stepTime: totalSteps,
+						songTime: totalPos,
+						bpm: curBPM,
+						stepCrochet: sc
+					});
+				}
 			}
 
-			var deltaSteps:Int = song.notes[i].lengthInSteps;
+			var deltaSteps:Int = (song.notes[i].lengthInSteps > 0) ? song.notes[i].lengthInSteps : 16;
 			totalSteps += deltaSteps;
 			totalPos += ((60 / curBPM) * 1000 / 4) * deltaSteps;
 		}
@@ -141,8 +163,11 @@ class Conductor
 			bpm = newBpm;
 			crochet = ((60 / bpm) * 1000);
 			stepCrochet = (crochet / 4) * measure;
-			defaultBPMChange.bpm = bpm;
-			defaultBPMChange.stepCrochet = stepCrochet;
+			if (bpmChangeMap == null || bpmChangeMap.length == 0)
+			{
+				defaultBPMChange.bpm = bpm;
+				defaultBPMChange.stepCrochet = stepCrochet;
+			}
 		}
 	}
 
@@ -151,7 +176,7 @@ class Conductor
 	 */
 	public static function getBPMChangeEvent(time:Float):BPMChangeEvent
 	{
-		if (bpmChangeMap == null || bpmChangeMap.length == 0 || time < bpmChangeMap[0].songTime)
+		if (bpmChangeMap == null || bpmChangeMap.length == 0)
 		{
 			defaultBPMChange.bpm = bpm;
 			defaultBPMChange.stepCrochet = stepCrochet;
@@ -159,6 +184,12 @@ class Conductor
 			defaultBPMChange.songTime = 0;
 			currentBPMChangeIndex = 0;
 			return defaultBPMChange;
+		}
+
+		if (time <= bpmChangeMap[0].songTime)
+		{
+			currentBPMChangeIndex = 0;
+			return bpmChangeMap[0];
 		}
 
 		if (currentBPMChangeIndex >= bpmChangeMap.length)

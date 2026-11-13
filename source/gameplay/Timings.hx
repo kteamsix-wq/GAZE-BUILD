@@ -1,4 +1,4 @@
-﻿package gameplay;
+package gameplay;
 
 import gameplay.PlayState;
 
@@ -13,14 +13,26 @@ class Timings
 	// from left to right
 	// order, max milliseconds, score from it, health/accuracy weight, fc label
 	public static var judgementsMap:Map<String, Array<Dynamic>> = [
-		"sick" => [0, 45, 350, 100, 'SFC'],
-		"good" => [1, 90, 150, 100, 'GFC'],
-		"bad"  => [2, 135, 0, 50, 'FC'],
-		"shit" => [3, 157.5, -50, -150],
-		"miss" => [4, 180, -100, -175],
+		"sick" => [0, 45.0, 350, 100, 'SFC'],
+		"good" => [1, 90.0, 200, 75, 'GFC'],
+		"bad"  => [2, 135.0, 100, 50, 'FC'],
+		"shit" => [3, 166.0, 50, 25, 'CLEAR'],
+		"miss" => [4, 166.0, -10, -175, null],
 	];
 
 	public static var msThreshold:Float = 0;
+	public static var sickThreshold:Float = 45.0;
+	public static var goodThreshold:Float = 90.0;
+	public static var badThreshold:Float = 135.0;
+	public static var shitThreshold:Float = 166.0;
+
+	public static inline function diffToJudgement(noteDiff:Float):String
+	{
+		if (noteDiff <= sickThreshold) return 'sick';
+		if (noteDiff <= goodThreshold) return 'good';
+		if (noteDiff <= badThreshold) return 'bad';
+		return 'shit';
+	}
 
 	// set the score judgements for later use
 	public static var scoreRating:Map<String, Int> = [
@@ -49,14 +61,22 @@ class Timings
 		judgementRates = [];
 
 		var biggestThreshold:Float = 0;
-		for (key in judgementsMap.keys())
+		for (key in ['sick', 'good', 'bad', 'shit'])
 		{
 			gottenJudgements.set(key, 0);
-			var arr = judgementsMap.get(key);
-			var th:Float = arr[1];
-			if (th > biggestThreshold) biggestThreshold = th;
+			if (judgementsMap.exists(key))
+			{
+				var arr = judgementsMap.get(key);
+				var th:Float = arr[1];
+				if (th > biggestThreshold) biggestThreshold = th;
+			}
 		}
-		msThreshold = biggestThreshold;
+		gottenJudgements.set('miss', 0);
+		if (judgementsMap.exists('sick')) sickThreshold = judgementsMap.get('sick')[1];
+		if (judgementsMap.exists('good')) goodThreshold = judgementsMap.get('good')[1];
+		if (judgementsMap.exists('bad'))  badThreshold  = judgementsMap.get('bad')[1];
+		if (judgementsMap.exists('shit')) shitThreshold = judgementsMap.get('shit')[1];
+		msThreshold = biggestThreshold > 0 ? biggestThreshold : 166.0;
 		
 		smallestRating = 'sick';
 		notesHit = 0;

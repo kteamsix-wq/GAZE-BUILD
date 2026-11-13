@@ -1,4 +1,4 @@
-﻿package editors.dev;
+package editors.dev;
 
 import openfl.display.Sprite;
 import openfl.display.Shape;
@@ -169,6 +169,7 @@ class DevConsole extends Sprite
 		titleDragArea.addEventListener(MouseEvent.MOUSE_DOWN, function(e:MouseEvent)
 		{
 			isDragging = true;
+			core.system.CursorManager.change('grabbing');
 			var parentSpr:Sprite = (parent != null) ? cast parent : this;
 			dragOffsetX = parentSpr.mouseX - this.x;
 			dragOffsetY = parentSpr.mouseY - this.y;
@@ -305,10 +306,12 @@ class DevConsole extends Sprite
 		btn.addEventListener(MouseEvent.MOUSE_OVER, function(_)
 		{
 			tf.textColor = hoverColor;
+			core.system.CursorManager.change('pointer');
 		});
 		btn.addEventListener(MouseEvent.MOUSE_OUT, function(_)
 		{
 			tf.textColor = defaultColor;
+			core.system.CursorManager.change('default');
 		});
 		btn.addEventListener(MouseEvent.CLICK, function(e:MouseEvent)
 		{
@@ -383,6 +386,7 @@ class DevConsole extends Sprite
 	function onDragUp(e:MouseEvent):Void
 	{
 		isDragging = false;
+		core.system.CursorManager.change('default');
 		if (stage != null)
 		{
 			stage.removeEventListener(MouseEvent.MOUSE_MOVE, onDragMove);

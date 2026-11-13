@@ -1,4 +1,4 @@
-﻿package core.save;
+package core.save;
 
 import flixel.FlxG;
 import core.utils.CoolUtil;
@@ -103,7 +103,7 @@ class Highscore
 
 	public static function formatSong(song:String, diff:Int):String
 	{
-		var daSong:String = song.toLowerCase();
+		var daSong:String = Paths.formatToSongPath(song);
 
 		var difficulty:String = '-' + CoolUtil.difficultyFromNumber(diff).toLowerCase();
 		difficulty = difficulty.replace('-normal', '');

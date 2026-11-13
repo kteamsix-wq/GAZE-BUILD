@@ -1,4 +1,4 @@
-﻿package;
+package;
 
 import editors.*;
 
@@ -46,7 +46,7 @@ class Main extends Sprite
 	public static var gameHeight:Int = 720;
 	public static var mainClassState:Class<FlxState> = PreloadState; // Uses the V-Slice PreloadState instead of Init directly
 	public static var framerate:Int = 120;
-	public static var gameVersion:String = '0.1-alpha1';
+	public static var gameVersion:String = '0.1-alpha2';
 	public static var lastState:FlxState;
 
 	var zoom:Float = -1;
@@ -86,6 +86,8 @@ class Main extends Sprite
 		addChild(gameCreate);
 
 		core.system.FunkinMemory.init();
+		core.utils.WindowUtil.init();
+		core.system.Paths.initFlxAnimate();
 
 		#if DISCORD_RPC
 		Discord.initializeRPC();
@@ -219,57 +221,115 @@ class Main extends Sprite
 }
 
 /**
- * V-Slice style Preload State
- * Gives a sleek modern loading visual before initializing the game data.
+ * Modern Loading / Preload State
+ * Displays the runner and mic-stand loading bar in the bottom-right corner.
  */
 class PreloadState extends FlxState
 {
-	var loadingText:FlxText;
-	var barBG:FlxSprite;
-	var barFill:FlxSprite;
+	var bg:FlxSprite;
+	var runner:FlxSprite;
+	var micStandBG:FlxSprite;
+	var micStandFill:FlxSprite;
+	var fillRect:flixel.math.FlxRect;
 	var canTransition:Bool = false;
 
 	override public function create():Void
 	{
 		super.create();
 
-		FlxG.mouse.visible = false;
+		core.system.CursorManager.init();
 		FlxG.cameras.bgColor = FlxColor.BLACK;
 
-		// Clean modern loading text
-		loadingText = new FlxText(0, FlxG.height / 2 - 40, FlxG.width, "LOADING", 32);
-		loadingText.setFormat(null, 32, FlxColor.WHITE, CENTER);
-		loadingText.alpha = 0;
-		add(loadingText);
+		bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		add(bg);
 
-		// Loading bar background
-		barBG = new FlxSprite(0, FlxG.height / 2 + 20).makeGraphic(400, 6, FlxColor.GRAY);
-		barBG.screenCenter(X);
-		barBG.alpha = 0;
-		add(barBG);
+		var chosenChar:String = (FlxG.random != null && FlxG.random.bool(50)) ? 'gf' : 'bf';
+		var atlas = core.system.Paths.getSparrowAtlas('menus/loading/assets/' + chosenChar);
+		if (atlas == null)
+			atlas = core.system.Paths.getSparrowAtlas('menus/loading/assets/bf');
 
-		// The fill (Pink/Magenta style)
-		barFill = new FlxSprite(barBG.x, barBG.y).makeGraphic(1, 6, FlxColor.fromInt(0xFFFF0066)); 
-		barFill.alpha = 0;
-		add(barFill);
+		runner = new FlxSprite();
+		if (atlas != null)
+		{
+			runner.frames = atlas;
+			runner.animation.addByPrefix('run', 'run', 24, true);
+			runner.animation.play('run');
+			runner.antialiasing = true;
+		}
 
-		// Fade in animations
-		FlxTween.tween(loadingText, {alpha: 1, y: loadingText.y - 10}, 0.6, {ease: FlxEase.quartOut});
-		FlxTween.tween(barBG, {alpha: 0.5}, 0.6, {ease: FlxEase.quartOut});
-		FlxTween.tween(barFill, {alpha: 1}, 0.6, {ease: FlxEase.quartOut});
+		if (chosenChar == 'gf')
+			runner.scale.set(0.28, 0.28);
+		else
+			runner.scale.set(0.35, 0.35);
+		runner.updateHitbox();
 
-		// Simulate loading for the V-Slice "feel"
-		FlxTween.tween(barFill.scale, {x: 400}, 1.5, {
-			ease: FlxEase.expoOut,
-			startDelay: 0.2,
-			onUpdate: function(t:FlxTween) {
-				barFill.updateHitbox();
+		var barGraphic = core.system.Paths.image('menus/loading/mic-stand');
+		var barScale:Float = 0.45;
+
+		micStandBG = new FlxSprite();
+		if (barGraphic != null)
+		{
+			micStandBG.loadGraphic(barGraphic);
+			micStandBG.scale.set(barScale, barScale);
+			micStandBG.updateHitbox();
+			micStandBG.antialiasing = true;
+			micStandBG.color = 0xFF222222;
+			micStandBG.alpha = 0.4;
+		}
+
+		micStandFill = new FlxSprite();
+		if (barGraphic != null)
+		{
+			micStandFill.loadGraphic(barGraphic);
+			micStandFill.scale.set(barScale, barScale);
+			micStandFill.updateHitbox();
+			micStandFill.antialiasing = true;
+			micStandFill.color = FlxColor.WHITE;
+		}
+
+		var padX:Float = 35;
+		var padY:Float = 20;
+
+		micStandBG.x = FlxG.width - micStandBG.width - padX;
+		micStandBG.y = FlxG.height - micStandBG.height - padY;
+
+		micStandFill.x = micStandBG.x;
+		micStandFill.y = micStandBG.y;
+
+		// Fixed/stationary in the middle of the mic-stand bar
+		runner.x = micStandBG.x + (micStandBG.width - runner.width) / 2;
+		runner.y = micStandBG.y - runner.height + 15;
+
+		// Add components in proper layering order (no text)
+		add(micStandBG);
+		add(micStandFill);
+		add(runner);
+
+		fillRect = new flixel.math.FlxRect(0, 0, 0, (micStandFill.frameHeight > 0) ? micStandFill.frameHeight : 234);
+
+		runner.alpha = 0;
+		micStandBG.alpha = 0;
+		micStandFill.alpha = 0;
+
+		FlxTween.tween(runner, {alpha: 1}, 0.25);
+		FlxTween.tween(micStandBG, {alpha: 0.4}, 0.25);
+		FlxTween.tween(micStandFill, {alpha: 1}, 0.25);
+
+		FlxTween.num(0.0, 1.0, 1.2, {
+			ease: FlxEase.quadOut,
+			startDelay: 0.1,
+			onUpdate: function(t:FlxTween)
+			{
+				updateProgress(t.percent);
 			},
-			onComplete: function(t:FlxTween) {
-				FlxTween.tween(loadingText, {alpha: 0}, 0.3);
-				FlxTween.tween(barBG, {alpha: 0}, 0.3);
-				FlxTween.tween(barFill, {alpha: 0}, 0.3, {
-					onComplete: function(_) {
+			onComplete: function(t:FlxTween)
+			{
+				updateProgress(1.0);
+				FlxTween.tween(runner, {alpha: 0}, 0.3);
+				FlxTween.tween(micStandBG, {alpha: 0}, 0.3);
+				FlxTween.tween(micStandFill, {alpha: 0}, 0.3, {
+					onComplete: function(_)
+					{
 						canTransition = true;
 					}
 				});
@@ -277,13 +337,35 @@ class PreloadState extends FlxState
 		});
 	}
 
+	function updateProgress(p:Float):Void
+	{
+		var cp = flixel.math.FlxMath.bound(p, 0.0, 1.0);
+		if (micStandFill != null && micStandFill.graphic != null && fillRect != null)
+		{
+			var clipW = micStandFill.frameWidth * cp;
+			fillRect.set(0, 0, clipW, micStandFill.frameHeight);
+			micStandFill.clipRect = fillRect;
+		}
+	}
+
 	override public function update(elapsed:Float):Void
 	{
 		super.update(elapsed);
+
 		if (canTransition)
 		{
 			canTransition = false;
-			Main.switchState(this, new Init());
+			Main.switchState(this, new core.base.Init());
 		}
+	}
+
+	override public function destroy():Void
+	{
+		if (fillRect != null)
+		{
+			fillRect.put();
+			fillRect = null;
+		}
+		super.destroy();
 	}
 }

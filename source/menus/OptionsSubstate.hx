@@ -1,4 +1,4 @@
-﻿package menus;
+package menus;
 import core.system.Paths;
 import core.base.Init;
 import flixel.FlxG;
@@ -360,13 +360,13 @@ class OptionsSubstate extends MusicBeatSubState
 		if (controls.UI_LEFT_P && curSlot > 0 && !items[curSelection].isAction)
 		{
 			curSlot = 0;
-			FlxG.sound.play(Paths.sound('system/scroll'));
+			FlxG.sound.play(Paths.sound('scroll'));
 			updateSlotHighlight();
 		}
 		else if (controls.UI_RIGHT_P && curSlot < 1 && !items[curSelection].isAction)
 		{
 			curSlot = 1;
-			FlxG.sound.play(Paths.sound('system/scroll'));
+			FlxG.sound.play(Paths.sound('scroll'));
 			updateSlotHighlight();
 		}
 
@@ -380,7 +380,7 @@ class OptionsSubstate extends MusicBeatSubState
 				Init.saveControls();
 				controls.setKeyboardScheme(None, false);
 				refreshKeyLabels();
-				FlxG.sound.play(Paths.sound('system/cancel'));
+				FlxG.sound.play(Paths.sound('cancel'));
 			}
 		}
 
@@ -395,7 +395,7 @@ class OptionsSubstate extends MusicBeatSubState
 					Init.resetControls();
 					controls.setKeyboardScheme(None, false);
 					refreshKeyLabels();
-					FlxG.sound.play(Paths.sound('system/confirm'));
+					FlxG.sound.play(Paths.sound('confirm'));
 					FlxG.camera.flash(FlxColor.WHITE, 0.2);
 				}
 			}
@@ -406,7 +406,7 @@ class OptionsSubstate extends MusicBeatSubState
 		}
 		else if (controls.BACK || FlxG.keys.justPressed.ESCAPE)
 		{
-			FlxG.sound.play(Paths.sound('system/cancel'));
+			FlxG.sound.play(Paths.sound('cancel'));
 			close();
 		}
 
@@ -417,7 +417,7 @@ class OptionsSubstate extends MusicBeatSubState
 	function updateSelection(change:Int = 0, playSound:Bool = true):Void
 	{
 		if (change != 0 && playSound)
-			FlxG.sound.play(Paths.sound('system/scroll'));
+			FlxG.sound.play(Paths.sound('scroll'));
 
 		curSelection += change;
 
@@ -533,7 +533,7 @@ class OptionsSubstate extends MusicBeatSubState
 		rebindPrompt.visible = true;
 		rebindHelp.visible = true;
 
-		FlxG.sound.play(Paths.sound('system/scroll'));
+		FlxG.sound.play(Paths.sound('scroll'));
 	}
 
 	function stopRebinding():Void
@@ -551,7 +551,7 @@ class OptionsSubstate extends MusicBeatSubState
 	{
 		if (FlxG.keys.justPressed.ESCAPE)
 		{
-			FlxG.sound.play(Paths.sound('system/cancel'));
+			FlxG.sound.play(Paths.sound('cancel'));
 			stopRebinding();
 			return;
 		}
@@ -566,7 +566,7 @@ class OptionsSubstate extends MusicBeatSubState
 				controls.setKeyboardScheme(None, false);
 				refreshKeyLabels();
 				updateSlotHighlight();
-				FlxG.sound.play(Paths.sound('system/confirm'));
+				FlxG.sound.play(Paths.sound('confirm'));
 			}
 			stopRebinding();
 			return;
@@ -578,27 +578,23 @@ class OptionsSubstate extends MusicBeatSubState
 			var item = items[curSelection];
 			if (Init.gameControls.exists(item.id))
 			{
-				// Clear duplicate key if already bound anywhere in the same controls map
-				for (otherKey in Init.gameControls.keys())
+				var actionSlots:Array<Dynamic> = Init.gameControls.get(item.id)[0];
+				if (actionSlots != null)
 				{
-					var slots:Array<Dynamic> = Init.gameControls.get(otherKey)[0];
-					if (slots != null)
-					{
-						for (s in 0...slots.length)
-						{
-							if (slots[s] == keyPressed)
-								slots[s] = FlxKey.NONE;
-						}
-					}
+					// If the same key is already bound to the other slot of this action, clear that other slot
+					var otherSlot:Int = (curSlot == 0 ? 1 : 0);
+					if (otherSlot < actionSlots.length && actionSlots[otherSlot] == keyPressed)
+						actionSlots[otherSlot] = FlxKey.NONE;
+
+					// Assign newly pressed key to current slot
+					actionSlots[curSlot] = keyPressed;
 				}
 
-				// Assign newly pressed key
-				Init.gameControls.get(item.id)[0][curSlot] = keyPressed;
 				Init.saveControls();
 				controls.setKeyboardScheme(None, false);
 				refreshKeyLabels();
 				updateSlotHighlight();
-				FlxG.sound.play(Paths.sound('system/confirm'));
+				FlxG.sound.play(Paths.sound('confirm'));
 			}
 			stopRebinding();
 		}

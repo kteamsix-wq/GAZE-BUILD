@@ -1,4 +1,4 @@
-﻿package core.utils;
+package core.utils;
 import gameplay.objects.FunkinArrows;
 import editors.*;
 import core.system.Paths;
@@ -27,17 +27,68 @@ class CoolUtil
 
 	public static function dashToSpace(string:String):String
 	{
-		return string.replace("-", " ");
+		return string.replace("-", " ").replace("_", " ");
 	}
 
 	public static function spaceToDash(string:String):String
 	{
-		return string.replace(" ", "-");
+		return string.replace(" ", "-").replace("_", "-");
 	}
 
 	public static function swapSpaceDash(string:String):String
 	{
 		return StringTools.contains(string, '-') ? dashToSpace(string) : spaceToDash(string);
+	}
+
+	/**
+	 * Returns normalized song name variants (dashes, spaces, underscores, raw, lowercase, squished)
+	 * to ensure seamless cross-engine compatibility with any naming convention (Psych, Kade, Codename, Vanilla, etc.).
+	 *
+	 * Examples:
+	 *   "Minha Musica" -> ["minha-musica", "minha musica", "minha_musica", "minhamusica", "Minha Musica"]
+	 *   "Minha-Musica" -> ["minha-musica", "minha musica", "minha_musica", "minhamusica", "Minha-Musica"]
+	 *   "Minha_Musica" -> ["minha-musica", "minha musica", "minha_musica", "minhamusica", "Minha_Musica"]
+	 */
+	public static function getSongNameVariants(song:String):Array<String>
+	{
+		if (song == null) return [];
+		var raw:String = song.trim();
+		if (raw.length == 0) return [];
+
+		var variants:Array<String> = [];
+
+		inline function addVariant(v:String)
+		{
+			if (v != null && v.length > 0 && !variants.contains(v))
+				variants.push(v);
+		}
+
+		var lower:String = raw.toLowerCase();
+
+		// 1. Dash-separated (FNF / Psych standard): "minha-musica"
+		var dashed:String = lower.replace('_', '-').replace(' ', '-');
+		while (dashed.indexOf('--') != -1) dashed = dashed.replace('--', '-');
+		addVariant(dashed);
+
+		// 2. Space-separated: "minha musica"
+		var spaced:String = lower.replace('_', ' ').replace('-', ' ');
+		while (spaced.indexOf('  ') != -1) spaced = spaced.replace('  ', ' ');
+		addVariant(spaced);
+
+		// 3. Underscore-separated: "minha_musica"
+		var underscored:String = lower.replace('-', '_').replace(' ', '_');
+		while (underscored.indexOf('__') != -1) underscored = underscored.replace('__', '_');
+		addVariant(underscored);
+
+		// 4. Exact lowercase & raw
+		addVariant(lower);
+		addVariant(raw);
+
+		// 5. Without separators: "minhamusica"
+		var squished:String = lower.replace('-', '').replace(' ', '').replace('_', '');
+		addVariant(squished);
+
+		return variants;
 	}
 
 	public static function coolTextFile(path:String):Array<String>
@@ -140,26 +191,109 @@ class CoolUtil
 		return charArray;
 	}
 
-	public static function getStageList():Array<String>
+	public static function getStageList(?modOnly:Bool = false, ?specificMod:String = null):Array<String>
 	{
 		var stageArray:Array<String> = [];
 		var stageMap:Map<String, Bool> = new Map();
 
 		#if sys
-		var directories:Array<String> = ['assets/data/stages'];
-		if (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory.length > 0) {
-			directories.push('mods/' + core.scripting.Mods.currentModDirectory + '/data/stages');
+		var directories:Array<String> = [];
+
+		var curMod:String = specificMod;
+		if (curMod == null || curMod.trim() == '')
+			curMod = core.scripting.Mods.currentModDirectory;
+
+		// 1. Mod-specific stages folders (supports both 'stages' and 'data/stages')
+		if (curMod != null && curMod.trim() != '' && curMod.trim().toLowerCase() != 'none')
+		{
+			var cleanMod:String = curMod.trim();
+			var modStages:String = 'mods/' + cleanMod + '/stages';
+			var modDataStages:String = 'mods/' + cleanMod + '/data/stages';
+			if (!directories.contains(modStages)) directories.push(modStages);
+			if (!directories.contains(modDataStages)) directories.push(modDataStages);
 		}
 
-		for (path in directories) {
-			if (sys.FileSystem.exists(path)) {
-				for (file in sys.FileSystem.readDirectory(path)) {
-					if (file.endsWith('.json') || file.endsWith('.hx')) {
-						var dotIdx = file.lastIndexOf('.');
-						var name = file.substring(0, dotIdx);
-						if (!stageMap.exists(name)) {
+		// 2. Global mod stages folders
+		if (!directories.contains('mods/stages')) directories.push('mods/stages');
+		if (!directories.contains('mods/data/stages')) directories.push('mods/data/stages');
+
+		// 3. Other mod directories if not locked to a specific mod
+		if (specificMod == null || specificMod.trim() == '')
+		{
+			for (modFolder in core.scripting.Mods.getModDirectories())
+			{
+				var mStages:String = 'mods/' + modFolder + '/stages';
+				var mDataStages:String = 'mods/' + modFolder + '/data/stages';
+				if (!directories.contains(mStages)) directories.push(mStages);
+				if (!directories.contains(mDataStages)) directories.push(mDataStages);
+			}
+		}
+
+		// 4. Base game assets (ONLY when modOnly is false)
+		if (!modOnly)
+		{
+			if (!directories.contains('assets/stages')) directories.push('assets/stages');
+			if (!directories.contains('assets/data/stages')) directories.push('assets/data/stages');
+		}
+
+		// Scan directories
+		for (path in directories)
+		{
+			if (sys.FileSystem.exists(path) && sys.FileSystem.isDirectory(path))
+			{
+				for (file in sys.FileSystem.readDirectory(path))
+				{
+					var subPath:String = path + '/' + file;
+					if (sys.FileSystem.isDirectory(subPath))
+					{
+						if (file != '.' && file != '..' && !file.startsWith('.') && !stageMap.exists(file))
+						{
+							stageMap.set(file, true);
+							stageArray.push(file);
+						}
+					}
+					else if (file.endsWith('.json') || file.endsWith('.hx') || file.endsWith('.hxc') || file.endsWith('.hscript') || file.endsWith('.lua'))
+					{
+						var dotIdx:Int = file.lastIndexOf('.');
+						var name:String = file.substring(0, dotIdx);
+						if (name != null && name.trim() != '' && !stageMap.exists(name))
+						{
 							stageMap.set(name, true);
 							stageArray.push(name);
+						}
+					}
+				}
+			}
+		}
+
+		// If modOnly was requested but mod had zero stages, fallback to base stages to avoid crash
+		if (modOnly && stageArray.length == 0)
+		{
+			var fallbackDirs:Array<String> = ['assets/stages', 'assets/data/stages'];
+			for (path in fallbackDirs)
+			{
+				if (sys.FileSystem.exists(path) && sys.FileSystem.isDirectory(path))
+				{
+					for (file in sys.FileSystem.readDirectory(path))
+					{
+						var subPath:String = path + '/' + file;
+						if (sys.FileSystem.isDirectory(subPath))
+						{
+							if (file != '.' && file != '..' && !file.startsWith('.') && !stageMap.exists(file))
+							{
+								stageMap.set(file, true);
+								stageArray.push(file);
+							}
+						}
+						else if (file.endsWith('.json') || file.endsWith('.hx') || file.endsWith('.hxc'))
+						{
+							var dotIdx:Int = file.lastIndexOf('.');
+							var name:String = file.substring(0, dotIdx);
+							if (name != null && name.trim() != '' && !stageMap.exists(name))
+							{
+								stageMap.set(name, true);
+								stageArray.push(name);
+							}
 						}
 					}
 				}
@@ -217,10 +351,10 @@ class CoolUtil
 	}
 
 	/**
-	 * Detects the inner transparent area ("campo invisível" / cutout slot) inside a health bar frame sprite.
+	 * Detects the inner transparent area ("campo invis�vel" / cutout slot) inside a health bar frame sprite.
 	 * Returns an FlxRect with (x, y, width, height) relative to the sprite, or null if no inner hole is found.
 	 */
-	public static function detectHealthBarBounds(sprite:FlxSprite, alphaThreshold:Int = 50):FlxRect
+	public static function detectHealthBarBounds(sprite:FlxSprite, alphaThreshold:Int = 220):FlxRect
 	{
 		if (sprite == null || sprite.graphic == null)
 			return null;
@@ -341,33 +475,83 @@ class CoolUtil
 			}
 		}
 
-		// Calculate bounding box of remaining enclosed transparent pixels (grid == 0)
-		var minX:Int = 99999;
-		var maxX:Int = -1;
-		var minY:Int = 99999;
-		var maxY:Int = -1;
-		var count:Int = 0;
+		// Encontra a maior região contígua de pixels transparentes fechados (o slot real da barra de vida,
+		// ignorando pequenos furos decorativos como elos de corrente, rachaduras ou parafusos)
+		var bestCount:Int = 0;
+		var bestMinX:Int = 99999;
+		var bestMaxX:Int = -1;
+		var bestMinY:Int = 99999;
+		var bestMaxY:Int = -1;
 
+		var compQueue:Array<Int> = [];
 		for (y in 0...h)
 		{
 			for (x in 0...w)
 			{
-				if (grid.get(y * w + x) == 0)
+				var startIdx = y * w + x;
+				if (grid.get(startIdx) == 0)
 				{
-					count++;
-					if (x < minX) minX = x;
-					if (x > maxX) maxX = x;
-					if (y < minY) minY = y;
-					if (y > maxY) maxY = y;
+					grid.set(startIdx, 3);
+					compQueue = [startIdx];
+					var compHead = 0;
+
+					var cMinX = x;
+					var cMaxX = x;
+					var cMinY = y;
+					var cMaxY = y;
+					var cCount = 0;
+
+					while (compHead < compQueue.length)
+					{
+						var cur = compQueue[compHead++];
+						cCount++;
+						var px = cur % w;
+						var py = Std.int(cur / w);
+
+						if (px < cMinX) cMinX = px;
+						if (px > cMaxX) cMaxX = px;
+						if (py < cMinY) cMinY = py;
+						if (py > cMaxY) cMaxY = py;
+
+						if (px > 0)
+						{
+							var n = py * w + (px - 1);
+							if (grid.get(n) == 0) { grid.set(n, 3); compQueue.push(n); }
+						}
+						if (px < w - 1)
+						{
+							var n = py * w + (px + 1);
+							if (grid.get(n) == 0) { grid.set(n, 3); compQueue.push(n); }
+						}
+						if (py > 0)
+						{
+							var n = (py - 1) * w + px;
+							if (grid.get(n) == 0) { grid.set(n, 3); compQueue.push(n); }
+						}
+						if (py < h - 1)
+						{
+							var n = (py + 1) * w + px;
+							if (grid.get(n) == 0) { grid.set(n, 3); compQueue.push(n); }
+						}
+					}
+
+					if (cCount > bestCount)
+					{
+						bestCount = cCount;
+						bestMinX = cMinX;
+						bestMaxX = cMaxX;
+						bestMinY = cMinY;
+						bestMaxY = cMaxY;
+					}
 				}
 			}
 		}
 
 		var result:FlxRect = null;
 		// Require reasonable dimensions for an inner slot
-		if (count >= 20 && maxX > minX && maxY > minY)
+		if (bestCount >= 20 && bestMaxX > bestMinX && bestMaxY > bestMinY)
 		{
-			result = new FlxRect(minX, minY, (maxX - minX + 1), (maxY - minY + 1));
+			result = new FlxRect(bestMinX, bestMinY, (bestMaxX - bestMinX + 1), (bestMaxY - bestMinY + 1));
 		}
 
 		if (tempBmp != null)

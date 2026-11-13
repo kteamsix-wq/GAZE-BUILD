@@ -1,4 +1,4 @@
-﻿package core.utils;
+package core.utils;
 
 import flixel.FlxG;
 import flixel.sound.FlxSound;
@@ -16,16 +16,28 @@ class Utils
 	{
 		// Make sure the music is playing
 		if (FlxG.sound.music == null || !FlxG.sound.music.playing)
-			FlxG.sound.playMusic(Paths.music("system/freakyMenu"));
+			FlxG.sound.playMusic(Paths.music("freakyMenu"));
+	}
+
+	public static var skinAssetCache:Map<String, String> = new Map<String, String>();
+
+	public static inline function clearSkinAssetCache():Void
+	{
+		skinAssetCache.clear();
 	}
 
 	/**
 	 * Resolves a skin asset path based on modifiers and libraries.
 	 * Checks multiple path combinations and returns the first existing one.
+	 * Results are cached in memory to eliminate synchronous disk I/O on note hits.
 	 */
 	public static function returnSkinAsset(asset:String, assetModifier:String = 'base', changeableSkin:String = 'default', baseLibrary:String,
 			?defaultChangeableSkin:String = 'default', ?defaultBaseAsset:String = 'base'):String
 	{
+		var cacheKey:String = '$baseLibrary|$changeableSkin|$assetModifier|$asset|$defaultChangeableSkin|$defaultBaseAsset';
+		if (skinAssetCache.exists(cacheKey))
+			return skinAssetCache.get(cacheKey);
+
 		var possiblePaths:Array<String> = [
 			'$baseLibrary/$changeableSkin/$assetModifier/$asset',
 			'$baseLibrary/$assetModifier/$asset',
@@ -40,11 +52,16 @@ class Utils
 		for (path in possiblePaths)
 		{
 			if (sys.FileSystem.exists(Paths.getPath('images/' + path + '.png', IMAGE)))
+			{
+				skinAssetCache.set(cacheKey, path);
 				return path;
+			}
 		}
 
 		// Fallback to the most specific path if none exist (might cause an error downstream if truly missing)
-		return "$baseLibrary/$changeableSkin/$assetModifier/$asset";
+		var fallback:String = '$baseLibrary/$changeableSkin/$assetModifier/$asset';
+		skinAssetCache.set(cacheKey, fallback);
+		return fallback;
 	}
 
 	/**

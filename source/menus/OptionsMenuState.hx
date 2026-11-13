@@ -419,7 +419,7 @@ class OptionsMenuState extends MusicBeatState
 	function updateSelection(change:Int = 0, playSound:Bool = true):Void
 	{
 		if (change != 0 && playSound)
-			FlxG.sound.play(Paths.sound('system/scroll'));
+			FlxG.sound.play(Paths.sound('scroll'));
 
 		curSelection += change;
 
@@ -493,10 +493,10 @@ class OptionsMenuState extends MusicBeatState
 				Init.updateAll();
 
 				refreshOptionValues();
-				FlxG.sound.play(Paths.sound('system/confirm'));
+				FlxG.sound.play(Paths.sound('confirm'));
 
 			case CATEGORY:
-				FlxG.sound.play(Paths.sound('system/confirm'));
+				FlxG.sound.play(Paths.sound('confirm'));
 				loadCategory(opt.id);
 
 			case ACTION:
@@ -548,7 +548,7 @@ class OptionsMenuState extends MusicBeatState
 				Init.saveSettings();
 				Init.updateAll();
 				refreshOptionValues();
-				FlxG.sound.play(Paths.sound('system/scroll'));
+				FlxG.sound.play(Paths.sound('scroll'));
 
 			case NUMBER(min, max, step, _):
 				var currentNum:Float = Std.parseFloat(Std.string(Init.trueSettings.get(opt.id)));
@@ -562,7 +562,7 @@ class OptionsMenuState extends MusicBeatState
 				Init.saveSettings();
 				Init.updateAll();
 				refreshOptionValues();
-				FlxG.sound.play(Paths.sound('system/scroll'));
+				FlxG.sound.play(Paths.sound('scroll'));
 
 			default:
 				// No adjustment
@@ -571,7 +571,7 @@ class OptionsMenuState extends MusicBeatState
 
 	function handleBack():Void
 	{
-		FlxG.sound.play(Paths.sound('system/cancel'));
+		FlxG.sound.play(Paths.sound('cancel'));
 
 		if (currentCategory != "main")
 		{
@@ -586,7 +586,7 @@ class OptionsMenuState extends MusicBeatState
 
 	function openControlsMenu():Void
 	{
-		FlxG.sound.play(Paths.sound('system/confirm'));
+		FlxG.sound.play(Paths.sound('confirm'));
 		openSubState(new OptionsSubstate());
 	}
 

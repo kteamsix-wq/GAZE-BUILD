@@ -1,4 +1,4 @@
-﻿package gameplay;
+package gameplay;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -282,6 +282,8 @@ class Countdown
 		if (PlayState.instance != null)
 		{
 			PlayState.instance.isInCountdown = false;
+			PlayState.instance.startedCountdown = true;
+			PlayState.instance.canPause = true;
 			PlayState.instance.startSong();
 		}
 	}
@@ -373,10 +375,10 @@ class Countdown
 			style = 'pixel';
 
 		var candidates:Array<String> = [
-			'system/countdown/' + style + '/' + soundName,
-			'system/countdown/' + soundName,
 			'countdown/' + style + '/' + soundName,
 			'countdown/' + soundName,
+			'system/countdown/' + style + '/' + soundName,
+			'system/countdown/' + soundName,
 			soundName + (style == 'pixel' ? '-pixel' : '')
 		];
 
@@ -387,7 +389,7 @@ class Countdown
 				return cand;
 		}
 
-		return 'system/countdown/' + style + '/' + soundName;
+		return 'countdown/' + style + '/' + soundName;
 	}
 
 	/**

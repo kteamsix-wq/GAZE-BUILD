@@ -1,4 +1,4 @@
-﻿package menus;
+package menus;
 
 import flash.text.TextField;
 import flixel.FlxG;
@@ -47,6 +47,7 @@ class FreeplayState extends MusicBeatState
 	var diffText:FlxText;
 	var lerpScore:Int = 0;
 	var intendedScore:Int = 0;
+	var lastRenderedScore:Int = -1;
 
 	var songThread:Thread;
 	var threadActive:Bool = true;
@@ -77,8 +78,18 @@ class FreeplayState extends MusicBeatState
 		if (weeks.length > 0)
 		{
 			for (week in weeks)
+			{
+				if (week.hideFreeplay)
+					continue;
+
 				for (weekSong in week.songs)
+				{
+					if (weekSong.hideFreeplay == true)
+						continue;
+
 					addSong(weekSong.name, week.weekIndex, weekSong.character, weekSong.color);
+				}
+			}
 		}
 		else
 		{
@@ -92,6 +103,29 @@ class FreeplayState extends MusicBeatState
 				var icon:String = (castSong != null && castSong.player2 != null) ? castSong.player2 : 'gf';
 				addSong(songFolder, 1, icon, FlxColor.WHITE);
 			}
+
+			#if sys
+			var scannedMods:Array<String> = core.scripting.Mods.getModDirectories();
+			for (modDir in scannedMods)
+			{
+				var modSongsPath = 'mods/$modDir/songs';
+				if (FileSystem.exists(modSongsPath) && FileSystem.isDirectory(modSongsPath))
+				{
+					for (folder in FileSystem.readDirectory(modSongsPath))
+					{
+						if (FileSystem.isDirectory('$modSongsPath/$folder'))
+						{
+							if (!hasChart(folder, folder))
+								continue;
+
+							var castSong:gameplay.chart.Song.SwagSong = Song.loadFromJson(folder, folder);
+							var icon:String = (castSong != null && castSong.player2 != null) ? castSong.player2 : 'gf';
+							addSong(folder, 1, icon, FlxColor.WHITE);
+						}
+					}
+				}
+			}
+			#end
 		}
 
 		#if desktop
@@ -114,7 +148,8 @@ class FreeplayState extends MusicBeatState
 			songText.targetY = i - curSelected;
 			grpSongs.add(songText);
 
-			var icon:HealthIcon = new HealthIcon(songs[i].songCharacter);
+			var char:String = (songs[i] != null && songs[i].songCharacter != null) ? songs[i].songCharacter : 'bf';
+			var icon:HealthIcon = new HealthIcon(char);
 			icon.sprTracker = songText;
 			iconArray.push(icon);
 			add(icon);
@@ -154,7 +189,11 @@ class FreeplayState extends MusicBeatState
 		var coolDifficultyArray:Array<String> = [];
 		for (i in CoolUtil.difficultyArray)
 		{
-			if (hasChart(songName, songName + '-' + i) || (hasChart(songName, songName) && i == "NORMAL") || hasChart(songName, i))
+			if (hasChart(songName, songName + '-' + i) 
+				|| hasChart(songName, songName + '_' + i)
+				|| hasChart(songName, songName + ' ' + i)
+				|| (hasChart(songName, songName) && i == "NORMAL") 
+				|| hasChart(songName, i))
 				coolDifficultyArray.push(i);
 		}
 
@@ -237,13 +276,17 @@ class FreeplayState extends MusicBeatState
 			}
 		}
 
-		scoreText.text = "PERSONAL BEST: " + lerpScore;
-		var maxW:Float = Math.max(scoreText.width, diffText.width) + 20;
-		scoreBG.setGraphicSize(Std.int(maxW), 70);
-		scoreBG.updateHitbox();
-		scoreBG.x = FlxG.width - scoreBG.width;
-		scoreText.x = FlxG.width - scoreText.width - 10;
-		diffText.x = scoreBG.x + (scoreBG.width / 2) - (diffText.width / 2);
+		if (lerpScore != lastRenderedScore)
+		{
+			lastRenderedScore = lerpScore;
+			scoreText.text = "PERSONAL BEST: " + lerpScore;
+			var maxW:Float = Math.max(scoreText.width, diffText.width) + 20;
+			scoreBG.setGraphicSize(Std.int(maxW), 70);
+			scoreBG.updateHitbox();
+			scoreBG.x = FlxG.width - scoreBG.width;
+			scoreText.x = FlxG.width - scoreText.width - 10;
+			diffText.x = scoreBG.x + (scoreBG.width / 2) - (diffText.width / 2);
+		}
 
 		mutex.acquire();
 		if (songToPlay != null)
@@ -314,7 +357,7 @@ class FreeplayState extends MusicBeatState
 		if (songs.length == 0) return;
 
 		if (playSound && change != 0)
-			FlxG.sound.play(Paths.sound('system/scroll'));
+			FlxG.sound.play(Paths.sound('scroll'));
 
 		curSelected += change;
 		if (curSelected < 0) curSelected = songs.length - 1;

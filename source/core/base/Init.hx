@@ -1,4 +1,4 @@
-﻿package core.base;
+package core.base;
 
 import core.save.Highscore;
 import editors.dev.Overlay;
@@ -43,7 +43,7 @@ class Init extends FlxState
 		"Framerate Cap" => [120, Selector, 'Define your maximum FPS.', NOT_FORCED, ['']],
 		"Alpha Arrows" => [true, Checkmark, "Makes the arrows at the top of the screen have 100% alpha.", NOT_FORCED],
 		"Alpha Holds" => [true, Checkmark, "Makes the sustain trails have 100% alpha.", NOT_FORCED],
-		'Ghost Tapping' => [false, Checkmark, "Enables Ghost Tapping, allowing you to press inputs without missing.", NOT_FORCED],
+		'Ghost Tapping' => [true, Checkmark, "Allows pressing inputs freely without missing.", NOT_FORCED],
 		'Centered Notefield' => [false, Checkmark, "Center the notes, disables the enemy's notes."]
 	];
 
@@ -96,7 +96,7 @@ class Init extends FlxState
 
 		// Additional configuration for default HaxeFlixel settings
 		FlxG.fixedTimestep = false; // Decouples game logic from FPS
-		FlxG.mouse.visible = false; // Hide mouse on startup
+		core.system.CursorManager.init(); // Native engine cursor with calibrated hotspots
 		FlxGraphic.defaultPersist = true; // Manually handle memory for graphics
 
 		core.system.FunkinMemory.initialCache();

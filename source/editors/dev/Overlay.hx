@@ -1,4 +1,4 @@
-﻿package editors.dev;
+package editors.dev;
 
 import openfl.display.Sprite;
 import openfl.display.Shape;
@@ -99,6 +99,8 @@ class Overlay extends Sprite
 	var cachedDrawCalls:Int = 0;
 	var cachedObjectsCount:Int = 0;
 	var cachedStateName:String = "";
+	var lastBgW:Float = -1;
+	var lastBgH:Float = -1;
 
 	public function new(x:Float = 10, y:Float = 10)
 	{
@@ -166,6 +168,14 @@ class Overlay extends Sprite
 		// Interactivity: Click to toggle detailed categories mode
 		buttonMode = true;
 		useHandCursor = true;
+		addEventListener(MouseEvent.MOUSE_OVER, function(_)
+		{
+			core.system.CursorManager.change('pointer');
+		});
+		addEventListener(MouseEvent.MOUSE_OUT, function(_)
+		{
+			core.system.CursorManager.change('default');
+		});
 		addEventListener(MouseEvent.CLICK, function(_)
 		{
 			detailedMode = !detailedMode;
@@ -180,6 +190,15 @@ class Overlay extends Sprite
 			if (stage != null)
 			{
 				stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyDown);
+			}
+			if (FlxG.signals != null && FlxG.signals.postStateSwitch != null)
+			{
+				FlxG.signals.postStateSwitch.add(function()
+				{
+					memory = FunkinMemory.currentMemUsage();
+					memoryPeak = memory;
+					forceUpdate();
+				});
 			}
 		});
 
@@ -325,10 +344,14 @@ class Overlay extends Sprite
 
 		if (displayFps)
 		{
-			fpsNum.text = Std.string(fps);
+			var fpsStr = Std.string(fps);
+			if (fpsNum.text != fpsStr) fpsNum.text = fpsStr;
 			var fpsColor:Int = (fps < Std.int(targetFps * 0.5)) ? 0xFF5555 : 0xFFFFFF;
-			fpsNum.textColor = fpsColor;
-			fpsLabel.textColor = fpsColor;
+			if (fpsNum.textColor != fpsColor)
+			{
+				fpsNum.textColor = fpsColor;
+				fpsLabel.textColor = fpsColor;
+			}
 
 			fpsNum.x = padX;
 			fpsNum.y = curY;
@@ -348,8 +371,10 @@ class Overlay extends Sprite
 
 		if (displayMemory)
 		{
-			memoryText.text = CoolUtil.getSizeString(memory);
-			memoryPeakText.text = ' / ${CoolUtil.getSizeString(memoryPeak)}';
+			var memStr = CoolUtil.getSizeString(memory);
+			if (memoryText.text != memStr) memoryText.text = memStr;
+			var peakStr = ' / ${CoolUtil.getSizeString(memoryPeak)}';
+			if (memoryPeakText.text != peakStr) memoryPeakText.text = peakStr;
 
 			memoryText.x = padX;
 			memoryText.y = curY;
@@ -369,10 +394,8 @@ class Overlay extends Sprite
 
 		if (showBuild)
 		{
-			if (displayExtra && !detailedMode)
-				buildField.text = 'GAZE v${Main.gameVersion} • ${cachedStateName} (${cachedDrawCalls} DC)';
-			else
-				buildField.text = 'GAZE ENGINE v${Main.gameVersion}';
+			var bText = (displayExtra && !detailedMode) ? 'GAZE v${Main.gameVersion} • ${cachedStateName} (${cachedDrawCalls} DC)' : 'GAZE ENGINE v${Main.gameVersion}';
+			if (buildField.text != bText) buildField.text = bText;
 
 			buildField.x = padX;
 			buildField.y = curY;
@@ -384,12 +407,19 @@ class Overlay extends Sprite
 		}
 
 		// Draw Codename-style semi-transparent black background behind the main counter
-		bgSprite.graphics.clear();
-		if (showBackground && (displayFps || displayMemory || displayExtra))
+		var totalW = maxWidth + (padX * 2);
+		var totalH = curY + 2;
+		if (lastBgW != totalW || lastBgH != totalH)
 		{
-			bgSprite.graphics.beginFill(0x000000, 0.5);
-			bgSprite.graphics.drawRect(0, 0, maxWidth + (padX * 2), curY + 2);
-			bgSprite.graphics.endFill();
+			lastBgW = totalW;
+			lastBgH = totalH;
+			bgSprite.graphics.clear();
+			if (showBackground && (displayFps || displayMemory || displayExtra))
+			{
+				bgSprite.graphics.beginFill(0x000000, 0.5);
+				bgSprite.graphics.drawRect(0, 0, totalW, totalH);
+				bgSprite.graphics.endFill();
+			}
 		}
 
 		// 4. Codename-style FramerateCategory panels below the main counter when detailedMode (F3) is active

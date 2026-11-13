@@ -1,4 +1,4 @@
-﻿package core.system;
+package core.system;
 
 import animate.FlxAnimate;
 import animate.FlxAnimateFrames;
@@ -100,6 +100,18 @@ class FunkinSprites extends FlxAnimate
 	public function addOffset(name:String, x:Float = 0, y:Float = 0)
 	{
 		animOffsets[name] = [x, y];
+	}
+
+	override public function updateHitbox():Void
+	{
+		super.updateHitbox();
+		var curAnim:String = getAnimName();
+		if (curAnim != null && curAnim != "" && animOffsets != null && animOffsets.exists(curAnim))
+		{
+			var daOffset = animOffsets.get(curAnim);
+			if (daOffset != null && daOffset.length >= 2)
+				offset.set(daOffset[0], daOffset[1]);
+		}
 	}
 
 	/**

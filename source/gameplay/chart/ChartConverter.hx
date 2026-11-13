@@ -1,6 +1,7 @@
-﻿package gameplay.chart;
+package gameplay.chart;
 
 import haxe.Json;
+import core.utils.CoolUtil;
 import gameplay.chart.Song.SwagSong;
 import gameplay.chart.Section.SwagSection;
 #if sys
@@ -1361,6 +1362,8 @@ class ChartConverter
 		if (song.assetModifier == null || song.assetModifier == "") song.assetModifier = "base";
 		if (song.events == null) song.events = [];
 		if (song.notes == null) song.notes = [];
+		if (song.format == null || song.format == "") song.format = "gaze";
+		if (song.chartPath == null && chartPath != null && chartPath != "") song.chartPath = chartPath;
 		song.validScore = true;
 	}
 
@@ -1419,70 +1422,173 @@ class ChartConverter
 	}
 
 	/**
+	 * Checks whether a SwagSong contains any playable notes across all sections.
+	 */
+	public static function hasPlayableNotes(song:SwagSong):Bool
+	{
+		if (song == null || song.notes == null || song.notes.length == 0)
+			return false;
+
+		for (section in song.notes)
+		{
+			if (section != null && section.sectionNotes != null && section.sectionNotes.length > 0)
+				return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Finds a chart file path across all supported engine layouts and directory structures.
+	 * Resolves spaces, dashes, and underscores interchangeably for cross-engine compatibility.
 	 */
 	public static function findChartPath(songFolder:String, chartName:String):String
 	{
 		if (songFolder == null || chartName == null)
 			return null;
 
-		var folder = songFolder.toLowerCase();
-		var chart = chartName.toLowerCase();
+		var folderVariants:Array<String> = CoolUtil.getSongNameVariants(songFolder);
+		var chartVariants:Array<String> = CoolUtil.getSongNameVariants(chartName);
+
+		if (folderVariants.length == 0) folderVariants.push(songFolder.toLowerCase().trim());
+		if (chartVariants.length == 0) chartVariants.push(chartName.toLowerCase().trim());
+
+		// Extract difficulty suffix if any (e.g. -hard, _hard, " hard")
+		var diffOnly:String = "";
+		var lowerChart:String = chartName.toLowerCase().trim();
+		for (diff in ['easy', 'normal', 'hard'])
+		{
+			if (lowerChart == diff)
+			{
+				diffOnly = diff;
+				break;
+			}
+			for (sep in ['-', '_', ' '])
+			{
+				if (lowerChart.endsWith(sep + diff))
+				{
+					diffOnly = diff;
+					break;
+				}
+			}
+			if (diffOnly.length > 0) break;
+		}
+
+		if (diffOnly.length == 0)
+		{
+			for (f in folderVariants)
+			{
+				for (sep in ['-', '_', ' '])
+				{
+					if (lowerChart.startsWith(f + sep))
+					{
+						diffOnly = lowerChart.substring((f + sep).length);
+						break;
+					}
+				}
+				if (diffOnly.length > 0) break;
+			}
+		}
+
+		if (diffOnly.length > 0)
+		{
+			if (!chartVariants.contains(diffOnly))
+				chartVariants.push(diffOnly);
+			for (f in folderVariants)
+			{
+				for (d in [f + '-' + diffOnly, f + '_' + diffOnly, f + ' ' + diffOnly])
+				{
+					if (!chartVariants.contains(d))
+						chartVariants.push(d);
+				}
+			}
+		}
 
 		var searchPaths:Array<String> = [];
 
 		#if sys
 		var curMod = core.scripting.Mods.currentModDirectory;
+		var modDirs:Array<String> = [];
 		if (curMod != null && curMod.length > 0)
+			modDirs.push(curMod);
+
+		for (m in core.scripting.Mods.getModDirectories())
 		{
-			// Mod search paths
-			searchPaths.push('mods/$curMod/songs/$folder/$chart.json');
-			searchPaths.push('mods/$curMod/songs/$folder/charts/$chart.json');
-			searchPaths.push('mods/$curMod/songs/$folder/chart/chart.json');
-			searchPaths.push('mods/$curMod/songs/$folder/$folder-chart.json');
-			searchPaths.push('mods/$curMod/data/$folder/$chart.json');
+			if (!modDirs.contains(m))
+				modDirs.push(m);
+		}
+
+		for (m in modDirs)
+		{
+			for (f in folderVariants)
+			{
+				for (c in chartVariants)
+				{
+					searchPaths.push('mods/$m/songs/$f/$c.json');
+					searchPaths.push('mods/$m/songs/$f/charts/$c.json');
+					searchPaths.push('mods/$m/data/$f/$c.json');
+				}
+				searchPaths.push('mods/$m/songs/$f/chart/chart.json');
+				searchPaths.push('mods/$m/songs/$f/$f-chart.json');
+				searchPaths.push('mods/$m/songs/$f/chart.json');
+				searchPaths.push('mods/$m/songs/$f/charts/chart.json');
+				searchPaths.push('mods/$m/data/$f/chart.json');
+				searchPaths.push('mods/$m/data/$f/$f.json');
+			}
 		}
 
 		// Global mods search paths
-		searchPaths.push('mods/songs/$folder/$chart.json');
-		searchPaths.push('mods/songs/$folder/charts/$chart.json');
-		searchPaths.push('mods/songs/$folder/chart/chart.json');
-		searchPaths.push('mods/songs/$folder/$folder-chart.json');
-		searchPaths.push('mods/data/$folder/$chart.json');
+		for (f in folderVariants)
+		{
+			for (c in chartVariants)
+			{
+				searchPaths.push('mods/songs/$f/$c.json');
+				searchPaths.push('mods/songs/$f/charts/$c.json');
+				searchPaths.push('mods/data/$f/$c.json');
+			}
+			searchPaths.push('mods/songs/$f/chart/chart.json');
+			searchPaths.push('mods/songs/$f/$f-chart.json');
+			searchPaths.push('mods/songs/$f/chart.json');
+			searchPaths.push('mods/songs/$f/charts/chart.json');
+			searchPaths.push('mods/data/$f/chart.json');
+			searchPaths.push('mods/data/$f/$f.json');
+		}
 		#end
 
 		// Base assets search paths
-		searchPaths.push('assets/songs/$folder/$chart.json');
-		searchPaths.push('assets/songs/$folder/charts/$chart.json');
-		searchPaths.push('assets/songs/$folder/chart/chart.json');
-		searchPaths.push('assets/songs/$folder/$folder-chart.json');
-		searchPaths.push('assets/data/$folder/$chart.json');
-
-		// Handle cases where chartName has song-prefix (e.g. "stress-hard") -> check "hard.json"
-		if (chart.startsWith(folder + "-"))
+		for (f in folderVariants)
 		{
-			var diffOnly = chart.substring(folder.length + 1);
-			#if sys
-			if (curMod != null && curMod.length > 0)
+			for (c in chartVariants)
 			{
-				searchPaths.push('mods/$curMod/songs/$folder/$diffOnly.json');
-				searchPaths.push('mods/$curMod/songs/$folder/charts/$diffOnly.json');
-				searchPaths.push('mods/$curMod/data/$folder/$diffOnly.json');
+				searchPaths.push('assets/songs/$f/$c.json');
+				searchPaths.push('assets/songs/$f/charts/$c.json');
+				searchPaths.push('assets/data/$f/$c.json');
 			}
-			searchPaths.push('mods/songs/$folder/$diffOnly.json');
-			searchPaths.push('mods/songs/$folder/charts/$diffOnly.json');
-			searchPaths.push('mods/data/$folder/$diffOnly.json');
-			#end
-			searchPaths.push('assets/songs/$folder/$diffOnly.json');
-			searchPaths.push('assets/songs/$folder/charts/$diffOnly.json');
-			searchPaths.push('assets/data/$folder/$diffOnly.json');
+			searchPaths.push('assets/songs/$f/chart/chart.json');
+			searchPaths.push('assets/songs/$f/$f-chart.json');
+			searchPaths.push('assets/songs/$f/chart.json');
+			searchPaths.push('assets/songs/$f/charts/chart.json');
+			searchPaths.push('assets/data/$f/chart.json');
+			searchPaths.push('assets/data/$f/$f.json');
 		}
 
 		#if sys
 		for (p in searchPaths)
 		{
 			if (FileSystem.exists(p))
+			{
+				var normalized:String = p.replace('\\', '/');
+				if (normalized.startsWith('mods/'))
+				{
+					var parts:Array<String> = normalized.split('/');
+					if (parts.length > 2 && parts[1] != 'songs' && parts[1] != 'data')
+					{
+						if (core.scripting.Mods.currentModDirectory != parts[1])
+							core.scripting.Mods.currentModDirectory = parts[1];
+					}
+				}
 				return p;
+			}
 		}
 		#end
 

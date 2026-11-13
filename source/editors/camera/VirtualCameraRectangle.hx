@@ -1,4 +1,4 @@
-﻿package editors.camera;
+package editors.camera;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
@@ -167,6 +167,20 @@ class VirtualCameraRectangle extends FlxSpriteGroup
 		camSlice.color = 0xFF7ABFBC;
 		add(camSlice);
 
+		// Optimize FlxSliceSprites to stretch rather than tile.
+		// Tiling when zoom is wide (e.g. 0.2 = 6400x3600) creates 50,000+ tiles, 100k+ vertices,
+		// and millions of dynamic array allocations per frame, causing severe FPS drops and freezing.
+		// Stretching limits each slice sprite to exactly 9 quads (36 vertices) for instant, 60+ FPS rendering!
+		for (slice in [leftExt, rightExt, camSliceOverlay, camSlice])
+		{
+			slice.stretchCenter = true;
+			slice.stretchTop = true;
+			slice.stretchBottom = true;
+			slice.stretchLeft = true;
+			slice.stretchRight = true;
+			slice.repeat = false;
+		}
+
 		// 4. Center Crosshair
 		middle = new FlxSprite().loadGraphic(Paths.image('menus/editors/camera/vcam/vcam_center'));
 		add(middle);
@@ -282,6 +296,14 @@ class VirtualCameraRectangle extends FlxSpriteGroup
 		leftExt.loadGraphic(val ? Paths.image('menus/editors/camera/vcam/vcam_slice_cutout_left') : Paths.image('menus/editors/camera/vcam/vcam_slice_left'));
 		rightExt.loadGraphic(val ? Paths.image('menus/editors/camera/vcam/vcam_slice_cutout_right') : Paths.image('menus/editors/camera/vcam/vcam_slice_right'));
 		camSlice.loadGraphic(val ? Paths.image('menus/editors/camera/vcam/vcam_slice_cutout') : Paths.image('menus/editors/camera/vcam/vcam_slice'));
+		@:privateAccess
+		{
+			leftExt.regen = true;
+			rightExt.regen = true;
+			camSlice.regen = true;
+		}
+
+		resize();
 
 		return showPassepartout;
 	}
@@ -302,11 +324,25 @@ class VirtualCameraRectangle extends FlxSpriteGroup
 		mainView.setGraphicSize(Std.int(w), Std.int(h));
 		mainView.updateHitbox();
 
-		camSlice.width = w;
-		camSlice.height = h;
+		if (camSlice.width != w) camSlice.width = w;
+		if (camSlice.height != h) camSlice.height = h;
 
-		camSliceOverlay.width = w;
-		camSliceOverlay.height = h;
+		if (camSliceOverlay.width != w) camSliceOverlay.width = w;
+		if (camSliceOverlay.height != h) camSliceOverlay.height = h;
+
+		if (showPassepartout)
+		{
+			var passeW = Math.max(FlxG.width * 3, w * 2);
+			var passeH = Math.max(FlxG.height * 3, h * 2);
+			passeT.scale.set(passeW, passeH);
+			passeT.updateHitbox();
+			passeB.scale.set(passeW, passeH);
+			passeB.updateHitbox();
+			passeL.scale.set(passeW, passeH);
+			passeL.updateHitbox();
+			passeR.scale.set(passeW, passeH);
+			passeR.updateHitbox();
+		}
 	}
 
 	public function cacheIdleCameraPoints():Void
@@ -601,12 +637,12 @@ class VirtualCameraRectangle extends FlxSpriteGroup
 
 		// Extended Bounds
 		var curExtWidth:Float = isRelative ? pieceSize : (pieceSize / Math.max(0.01, _zoom));
-		leftExt.width = curExtWidth;
-		leftExt.height = camSlice.height;
+		if (leftExt.width != curExtWidth) leftExt.width = curExtWidth;
+		if (leftExt.height != camSlice.height) leftExt.height = camSlice.height;
 		leftExt.setPosition(camSlice.x - leftExt.width, camSlice.y);
 
-		rightExt.width = curExtWidth;
-		rightExt.height = camSlice.height;
+		if (rightExt.width != curExtWidth) rightExt.width = curExtWidth;
+		if (rightExt.height != camSlice.height) rightExt.height = camSlice.height;
 		rightExt.setPosition(camSlice.x + camSlice.width, camSlice.y);
 
 		cornerTLSmall.setPosition(leftExt.x, leftExt.y);

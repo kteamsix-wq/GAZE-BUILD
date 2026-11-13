@@ -1,4 +1,4 @@
-﻿package core.base;
+package core.base;
 import gameplay.objects.FunkinArrows;
 import editors.*;
 import core.system.Paths;
@@ -30,15 +30,19 @@ class MusicBeatState extends FunkinState
 	override function create()
 	{
 		core.system.FunkinMemory.init();
+		if (FlxG.mouse != null)
+			core.system.CursorManager.reset();
 
 		if (transIn != null)
 			trace('reg ' + transIn.region);
 
 		super.create();
 
+		#if (debug && !FLX_NO_DEBUG)
 		FlxG.watch.add(Conductor, "songPosition");
 		FlxG.watch.add(this, "curBeat");
 		FlxG.watch.add(this, "curStep");
+		#end
 	}
 
 	override function update(elapsed:Float)

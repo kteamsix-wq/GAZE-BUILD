@@ -1,4 +1,4 @@
-﻿package menus;
+package menus;
 
 import flixel.FlxG;
 import flixel.FlxObject;
@@ -27,6 +27,9 @@ class MainMenuState extends MusicBeatState
 
 	var optionShit:Array<String> = ['freeplay', 'options', 'credits'];
 	var selectedSomethin:Bool = false;
+
+	var versionText:FlxText;
+	var modText:FlxText;
 
 	override function create()
 	{
@@ -95,10 +98,22 @@ class MainMenuState extends MusicBeatState
 			FlxG.camera.snapToTarget();
 		}
 
-		var versionText:FlxText = new FlxText(5, FlxG.height - 18, 0, "K-Slice v" + Main.gameVersion, 12);
+		versionText = new FlxText(5, FlxG.height - 18, 0, "K-Slice v" + Main.gameVersion, 12);
 		versionText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		versionText.scrollFactor.set();
 		add(versionText);
+
+		modText = new FlxText(5, FlxG.height - 36, 0, "", 14);
+		modText.setFormat(Paths.font("vcr.ttf"), 14, 0xFF33CCFF, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		modText.scrollFactor.set();
+		add(modText);
+		updateModText();
+	}
+
+	function updateModText():Void
+	{
+		var curMod:String = (core.scripting.Mods.currentModDirectory != null && core.scripting.Mods.currentModDirectory != '') ? core.scripting.Mods.currentModDirectory : 'None';
+		modText.text = "Mod: " + curMod + " [TAB to switch]";
 	}
 
 	override function update(elapsed:Float)
@@ -108,17 +123,25 @@ class MainMenuState extends MusicBeatState
 			if (controls.UI_UP_P)
 			{
 				curSelected--;
-				FlxG.sound.play(Paths.sound('system/scroll'));
+				FlxG.sound.play(Paths.sound('scroll'));
 			}
 			else if (controls.UI_DOWN_P)
 			{
 				curSelected++;
-				FlxG.sound.play(Paths.sound('system/scroll'));
+				FlxG.sound.play(Paths.sound('scroll'));
 			}
 
-			if (flixel.FlxG.keys.justPressed.TAB)
+			// Codename-style Mod Switcher Trigger (TAB or clicking version / mod text)
+			if (flixel.FlxG.keys.justPressed.TAB || (FlxG.mouse.justPressed && ((versionText != null && FlxG.mouse.overlaps(versionText)) || (modText != null && FlxG.mouse.overlaps(modText)))))
 			{
-				Main.switchState(this, new ModsMenuState());
+				persistentUpdate = false;
+				persistentDraw = true;
+				var modSub = new ModSwitchMenu();
+				modSub.closeCallback = function() {
+					persistentUpdate = true;
+					updateModText();
+				};
+				openSubState(modSub);
 			}
 
 			if (flixel.FlxG.keys.justPressed.SEVEN)
@@ -132,10 +155,33 @@ class MainMenuState extends MusicBeatState
 			else if (curSelected >= optionShit.length)
 				curSelected = 0;
 
-			if (controls.ACCEPT)
+			var mouseClickedItem:Bool = false;
+			var hoveringInteractive:Bool = (versionText != null && FlxG.mouse.overlaps(versionText)) || (modText != null && FlxG.mouse.overlaps(modText));
+
+			menuItems.forEach(function(spr:FlxSprite)
+			{
+				if (FlxG.mouse.overlaps(spr))
+				{
+					hoveringInteractive = true;
+					if (curSelected != spr.ID && (FlxG.mouse.justMoved || FlxG.mouse.justPressed))
+					{
+						curSelected = spr.ID;
+						FlxG.sound.play(Paths.sound('scroll'));
+						updateSelection();
+					}
+					if (FlxG.mouse.justPressed)
+					{
+						mouseClickedItem = true;
+					}
+				}
+			});
+
+			CursorManager.change(hoveringInteractive ? 'pointer' : 'default');
+
+			if (controls.ACCEPT || mouseClickedItem)
 			{
 				selectedSomethin = true;
-				FlxG.sound.play(Paths.sound('system/confirm'));
+				FlxG.sound.play(Paths.sound('confirm'));
 
 				FlxFlicker.flicker(magenta, 0.8, 0.1, false);
 

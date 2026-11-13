@@ -1,4 +1,4 @@
-﻿package gameplay.objects;
+package gameplay.objects;
 import core.system.Assets;
 import gameplay.Conductor;
 import gameplay.chart.Section.SwagSection;
@@ -294,7 +294,7 @@ class Note extends FunkinSprites
 	public var alphaMod:Float = 1.0;
 	public var lane:Int = 0;
 	public var isSustainEnd:Bool = false;
-	public var baseScale:flixel.math.FlxPoint = new flixel.math.FlxPoint(0.7, 0.7);
+	public var baseScale:flixel.math.FlxPoint = null;
 	public var rgbGraphics:Dynamic = {flash: 0.0, alpha: 1.0};
 
 	// it has come to this.
@@ -303,6 +303,7 @@ class Note extends FunkinSprites
 	public function new(strumTime:Float, noteData:Int, noteAlt:Float, ?prevNote:Note, ?sustainNote:Bool = false)
 	{
 		super(x, y);
+		baseScale = flixel.math.FlxPoint.get(0.7, 0.7);
 
 		if (prevNote == null)
 			prevNote = this;
@@ -337,7 +338,7 @@ class Note extends FunkinSprites
 
 		if (mustPress)
 		{
-			if (strumTime > Conductor.songPosition - (Timings.msThreshold) && strumTime < Conductor.songPosition + (Timings.msThreshold))
+			if (strumTime >= Conductor.songPosition - (Timings.msThreshold) && strumTime <= Conductor.songPosition + (Timings.msThreshold))
 				canBeHit = true;
 			else
 				canBeHit = false;
@@ -373,6 +374,9 @@ class Note extends FunkinSprites
 			noteClipRect.put();
 			noteClipRect = null;
 		}
+		prevNote = null;
+		parentNote = null;
+		if (childrenNotes != null) childrenNotes = [];
 		super.destroy();
 	}
 
@@ -641,13 +645,14 @@ class UIStaticArrow extends FlxSprite
 
 	public var lane:Int = 0;
 	public var alphaMod:Float = 1.0;
-	public var baseScale:flixel.math.FlxPoint = new flixel.math.FlxPoint(0.7, 0.7);
+	public var baseScale:flixel.math.FlxPoint = null;
 	public var rgbGraphics:Dynamic = {flash: 0.0, alpha: 1.0};
 
 	public function new(x:Float, y:Float, ?babyArrowType:Int = 0)
 	{
 		// this extension is just going to rely a lot on preexisting code as I wanna try to write an extension before I do options and stuff
 		super(x, y);
+		baseScale = flixel.math.FlxPoint.get(0.7, 0.7);
 		animOffsets = new Map<String, Array<Dynamic>>();
 
 		this.babyArrowType = babyArrowType;
@@ -770,6 +775,21 @@ class UIStaticArrow extends FlxSprite
 	// that last function was so useful I gave it a sequel
 	public static final colors:Array<String> = ['purple', 'blue', 'green', 'red'];
 	public static function getColorFromNumber(numb:Int) { return colors[numb % colors.length]; }
+
+	override public function destroy():Void
+	{
+		if (baseScale != null)
+		{
+			baseScale.put();
+			baseScale = null;
+		}
+		if (animOffsets != null)
+		{
+			animOffsets.clear();
+			animOffsets = null;
+		}
+		super.destroy();
+	}
 }
 
 class Strumline extends FlxTypedGroup<FlxBasic>

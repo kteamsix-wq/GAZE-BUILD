@@ -1,4 +1,5 @@
 .vscode/
 .haxelib/
+.hxcpp_cache/
 export/
 docs/legacy-docs/_build

@@ -1,45 +1,14 @@
 {
-	"animations": [
-		{
-			"offsets": [
-				37,
-				11
-			],
-			"loop": false,
-			"fps": 24,
-			"anim": "firstDeath",
-			"indices": [],
-			"name": "Death Intro"
-		},
-		{
-			"offsets": [
-				37,
-				5
-			],
-			"loop": true,
-			"fps": 24,
-			"anim": "deathLoop",
-			"indices": [],
-			"name": "Death Loop"
-		},
-		{
-			"offsets": [
-				37,
-				69
-			],
-			"loop": false,
-			"fps": 24,
-			"anim": "deathConfirm",
-			"indices": [],
-			"name": "Death Confirm"
-		}
-	],
+	"loopDeath": "deathLoop",
 	"no_antialiasing": false,
-	"image": "characters/bf-death",
-	"position": [
-		0,
-		350
+	"camera_position": [
+		2,
+		27
 	],
+	"confirmDeath": "deathConfirm",
+	"firstDeath": "firstDeath",
+	"sing_duration": 4,
+	"loopDeathMusic": "gameOver",
 	"healthicon": "bf",
 	"flip_x": true,
 	"healthbar_colors": [
@@ -47,10 +16,48 @@
 		176,
 		209
 	],
-	"camera_position": [
+	"position": [
 		0,
-		0
+		350
 	],
-	"sing_duration": 4,
-	"scale": 1
+	"scale": 1,
+	"confirmDeathSound": "gameOverEnd",
+	"image": "characters/bf-death",
+	"firstDeathSound": "fnf_loss_sfx",
+	"gameOverChar": "bf-dead",
+	"animations": [
+		{
+			"loop": false,
+			"offsets": [
+				-1,
+				0
+			],
+			"anim": "firstDeath",
+			"fps": 24,
+			"name": "Death Intro",
+			"indices": []
+		},
+		{
+			"loop": true,
+			"offsets": [
+				-1,
+				0
+			],
+			"anim": "deathLoop",
+			"fps": 24,
+			"name": "Death Loop",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				-1,
+				0
+			],
+			"anim": "deathConfirm",
+			"fps": 24,
+			"name": "Death Confirm",
+			"indices": []
+		}
+	]
 }

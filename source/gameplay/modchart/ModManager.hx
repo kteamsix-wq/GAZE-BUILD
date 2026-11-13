@@ -1,4 +1,4 @@
-﻿// NightmareVision modchart system implementation for GAZE BUILD / K-Slice Engine
+// NightmareVision modchart system implementation for GAZE BUILD / K-Slice Engine
 package gameplay.modchart;
 
 import flixel.FlxSprite;
@@ -93,6 +93,23 @@ class ModManager implements IFlxDestroyable
 	public var modArray:Array<Modifier> = [];
 
 	public var activeMods:Array<Array<String>> = [[], []];
+	public var activeNoteMods:Array<Array<Modifier>> = [[], []];
+
+	public function rebuildActiveNoteMods(player:Int):Void
+	{
+		while (activeNoteMods.length <= player) activeNoteMods.push([]);
+		var list:Array<Modifier> = [];
+		if (player < activeMods.length && activeMods[player] != null)
+		{
+			for (name in activeMods[player])
+			{
+				var mod = notemodRegister.get(name);
+				if (mod != null && !list.contains(mod))
+					list.push(mod);
+			}
+		}
+		activeNoteMods[player] = list;
+	}
 
 	inline public function quickRegister(mod:Modifier) registerMod(mod.getName(), mod);
 
@@ -175,6 +192,7 @@ class ModManager implements IFlxDestroyable
 					if (modParent.shouldExecute(player, modParent.getValue(player)))
 					{
 						activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+						rebuildActiveNoteMods(player);
 						return;
 					}
 					for (subname => submod in modParent.submods)
@@ -182,6 +200,7 @@ class ModManager implements IFlxDestroyable
 						if (submod.shouldExecute(player, submod.getValue(player)))
 						{
 							activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+							rebuildActiveNoteMods(player);
 							return;
 						}
 					}
@@ -191,6 +210,7 @@ class ModManager implements IFlxDestroyable
 			}
 
 			activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
+			rebuildActiveNoteMods(player);
 		}
 	}
 
@@ -257,13 +277,11 @@ class ModManager implements IFlxDestroyable
 			obj.y = (pos.y - obj.height * .5);
 		}
 
-		if (player < activeMods.length && activeMods[player] != null)
+		if (player < activeNoteMods.length && activeNoteMods[player] != null)
 		{
-			for (name in activeMods[player])
+			for (mod in activeNoteMods[player])
 			{
-				var mod:Modifier = notemodRegister.get(name);
-				if (mod == null || !obj.active) continue;
-
+				if (!obj.active) break;
 				if (isNote) mod.updateNote(beat, note, pos, player);
 				else if (obj is UIStaticArrow) mod.updateReceptor(beat, cast obj, pos, player);
 				else mod.updateNoteSplash(beat, obj, pos, player);
@@ -301,15 +319,12 @@ class ModManager implements IFlxDestroyable
 
 		pos.setTo(getBaseX(data, player), getBaseY() + diff, 0);
 
-		if (player < activeMods.length && activeMods[player] != null)
+		if (player < activeNoteMods.length && activeNoteMods[player] != null)
 		{
-			for (name in activeMods[player])
+			for (mod in activeNoteMods[player])
 			{
-				if (!obj.active || (exclusions != null && exclusions.contains(name))) continue;
-
-				var mod:Modifier = notemodRegister.get(name);
-				if (mod == null) continue;
-
+				if (!obj.active) break;
+				if (exclusions != null && exclusions.contains(mod.getName())) continue;
 				pos = mod.getPos(time, diff, tDiff, beat, pos, data, player, obj);
 			}
 		}

@@ -1,4 +1,4 @@
-﻿package gameplay.objects;
+package gameplay.objects;
 import core.system.Paths;
 import core.utils.Utils;
 import core.system.Assets;
@@ -25,6 +25,10 @@ typedef CharacterFile = {
 	@:optional var scale:Null<Float>;
 	@:optional var sing_duration:Null<Float>;
 	@:optional var healthicon:String;
+	@:optional var icon_offsets:Array<Float>;
+	@:optional var icon_suffix:String;
+	@:optional var icon_animations:Array<CharacterAnim>;
+	@:optional var icon_scale:Null<Float>;
 	
 	@:optional var position:Array<Float>;
 	@:optional var camera_position:Array<Float>;
@@ -61,12 +65,16 @@ class Character extends FunkinSprites
 	public var debugMode:Bool = false;
 
 	public var isPlayer:Bool = false;
-	public var curCharacter:String = 'placeman';
+	public var curCharacter:String = 'bf';
 
 	public var holdTimer:Float = 0;
 	public var singDuration:Float = 4;
 	
 	public var healthIcon:String = 'face';
+	public var iconOffsets:Array<Float> = [0, 0];
+	public var iconSuffix:String = '';
+	public var iconAnimations:Array<CharacterAnim> = null;
+	public var iconScale:Float = 1.0;
 	public var healthColorArray:Array<Int> = [161, 161, 161];
 	
 	public var positionArray:Array<Float> = [0, 0];
@@ -76,9 +84,9 @@ class Character extends FunkinSprites
 	public var firstDeathAnim:String = 'firstDeath';
 	public var loopDeathAnim:String = 'deathLoop';
 	public var confirmDeathAnim:String = 'deathConfirm';
-	public var firstDeathSound:String = 'system/gameover/fnf_loss_sfx';
-	public var loopDeathMusic:String = 'system/gameover/gameOver';
-	public var confirmDeathSound:String = 'system/gameover/gameOverEnd';
+	public var firstDeathSound:String = 'gameover/fnf_loss_sfx';
+	public var loopDeathMusic:String = 'gameover/gameOver';
+	public var confirmDeathSound:String = 'gameover/gameOverEnd';
 
 	public var characterData:CharacterData;
 	public var adjustPos:Bool = true;
@@ -153,9 +161,9 @@ class Character extends FunkinSprites
 				}
 				else
 				{
-					trace("Could not find character JSON! Falling back to placeman...");
-					if (curCharacter != 'placeman')
-						return setCharacter(this.x, this.y, 'placeman');
+					trace("Could not find character JSON! Falling back to bf...");
+					if (curCharacter != 'bf')
+						return setCharacter(x, y, 'bf');
 					else
 						return this;
 				}
@@ -171,8 +179,6 @@ class Character extends FunkinSprites
 				}
 			}
 		}
-
-		dance();
 
 		if (isPlayer)
 		{
@@ -194,12 +200,28 @@ class Character extends FunkinSprites
 			this.y = y + characterData.offsetY;
 		}
 
+		dance();
+		updateHitbox();
+
+		if (adjustPos)
+		{
+			this.x = x + characterData.offsetX;
+			this.y = y + (characterData.offsetY - (frameHeight * scale.y));
+		}
+		else
+		{
+			this.x = x + characterData.offsetX;
+			this.y = y + characterData.offsetY;
+		}
+
 		return this;
 	}
 
 	public function loadCharacterFile(json:CharacterFile, x:Float, y:Float):Character
 	{
 		animOffsets = new Map<String, Array<Dynamic>>();
+		if (animation != null)
+			animation.destroyAnimations();
 		antialiasing = true;
 
 		characterData = {
@@ -212,10 +234,22 @@ class Character extends FunkinSprites
 
 		var animJson = Paths.getPath('images/' + json.image + '/Animation.json', TEXT);
 		if (sys.FileSystem.exists(animJson)) {
-			this.frames = animate.FlxAnimateFrames.fromAnimate(Paths.getPath('images/' + json.image, TEXT));
+			Paths.initFlxAnimate();
 			try {
-				this.anim.addBySymbol('idle', 'BF idle dance', 24, false);
-			} catch(e:Dynamic) {}
+				var animPath = Paths.getPath('images/' + json.image, TEXT);
+				this.frames = animate.FlxAnimateFrames.fromAnimate(animPath);
+				if (this.frames == null) {
+					FlxG.log.warn('FlxAnimateFrames returned null for ' + animPath + ', falling back to Sparrow');
+					loadOptimizedSparrow(json.image);
+				} else {
+					try {
+						this.anim.addBySymbol('idle', 'BF idle dance', 24, false);
+					} catch(e:Dynamic) {}
+				}
+			} catch(e:Dynamic) {
+				FlxG.log.error('Failed to load Animate character atlas for "' + json.image + '": ' + e);
+				loadOptimizedSparrow(json.image);
+			}
 		} else {
 			loadOptimizedSparrow(json.image);
 		}
@@ -249,6 +283,22 @@ class Character extends FunkinSprites
 			
 		if (json.healthicon != null && json.healthicon.length > 0)
 			healthIcon = json.healthicon;
+		if (json.icon_offsets != null && json.icon_offsets.length >= 2)
+			iconOffsets = [json.icon_offsets[0], json.icon_offsets[1]];
+		else
+			iconOffsets = [0, 0];
+		if (json.icon_suffix != null)
+			iconSuffix = json.icon_suffix;
+		else
+			iconSuffix = '';
+		if (json.icon_animations != null)
+			iconAnimations = json.icon_animations;
+		else
+			iconAnimations = null;
+		if (json.icon_scale != null && json.icon_scale > 0)
+			iconScale = json.icon_scale;
+		else
+			iconScale = 1.0;
 		if (json.healthbar_colors != null && json.healthbar_colors.length > 2)
 			healthColorArray = json.healthbar_colors;
 			
@@ -288,8 +338,6 @@ class Character extends FunkinSprites
 			}
 		}
 
-		dance();
-
 		if (isPlayer)
 		{
 			flipX = !flipX;
@@ -298,6 +346,20 @@ class Character extends FunkinSprites
 		}
 		else if (curCharacter.startsWith('bf'))
 			flipLeftRight();
+
+		if (adjustPos)
+		{
+			this.x = x + characterData.offsetX;
+			this.y = y + (characterData.offsetY - (frameHeight * scale.y));
+		}
+		else
+		{
+			this.x = x + characterData.offsetX;
+			this.y = y + characterData.offsetY;
+		}
+
+		dance();
+		updateHitbox();
 
 		if (adjustPos)
 		{

@@ -174,7 +174,7 @@ class TitleState extends MusicBeatState
 		{
 			titleText.animation.play('press');
 			FlxG.camera.flash(FlxColor.WHITE, 1);
-			FlxG.sound.play(Paths.sound('system/confirm'));
+			FlxG.sound.play(Paths.sound('confirm'));
 
 			transitioning = true;
 

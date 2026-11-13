@@ -29,7 +29,7 @@ class PauseSubState extends MusicBeatSubState
 	{
 		super();
 
-		pauseMusic = new FlxSound().load(Paths.music("system/breakfast"));
+		pauseMusic = new FlxSound().load(Paths.music("breakfast"));
 		pauseMusic.looped = true;
 		pauseMusic.autoDestroy = true;
 		pauseMusic.volume = 0;
@@ -139,7 +139,7 @@ class PauseSubState extends MusicBeatSubState
 		curSelected += change;
 
 		if (change != 0)
-			FlxG.sound.play(Paths.sound('system/scroll'));
+			FlxG.sound.play(Paths.sound('scroll'));
 
 		if (curSelected < 0)
 			curSelected = menuItems.length - 1;

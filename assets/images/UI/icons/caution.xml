@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="icon-caution.png">
+	<!-- Created with Adobe Animate version 22.0.0.93 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="losingcaution0000" x="0" y="0" width="128" height="156" frameX="0" frameY="0" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0001" x="0" y="0" width="128" height="156" frameX="0" frameY="0" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0002" x="137" y="0" width="140" height="140" frameX="-12" frameY="-12" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0003" x="137" y="0" width="140" height="140" frameX="-12" frameY="-12" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0004" x="286" y="0" width="145" height="139" frameX="-11" frameY="-11" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0005" x="286" y="0" width="145" height="139" frameX="-11" frameY="-11" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0006" x="440" y="0" width="133" height="138" frameX="-17" frameY="-9" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0007" x="582" y="0" width="132" height="134" frameX="-15" frameY="-13" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0008" x="582" y="0" width="132" height="134" frameX="-15" frameY="-13" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="losingcaution0009" x="723" y="0" width="131" height="137" frameX="-15" frameY="-10" frameWidth="156" frameHeight="156"/>
+	<SubTexture name="neutralcaution0000" x="863" y="0" width="116" height="124" frameX="0" frameY="-19" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0001" x="863" y="0" width="116" height="124" frameX="0" frameY="-19" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0002" x="0" y="165" width="102" height="145" frameX="-6" frameY="-3" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0003" x="0" y="165" width="102" height="145" frameX="-6" frameY="-3" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0004" x="111" y="165" width="107" height="145" frameX="-4" frameY="0" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0005" x="111" y="165" width="107" height="145" frameX="-4" frameY="0" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0006" x="227" y="165" width="106" height="138" frameX="-4" frameY="-9" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0007" x="342" y="165" width="105" height="140" frameX="-4" frameY="-8" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0008" x="456" y="165" width="105" height="142" frameX="-4" frameY="-6" frameWidth="116" frameHeight="148"/>
+	<SubTexture name="neutralcaution0009" x="570" y="165" width="106" height="141" frameX="-4" frameY="-6" frameWidth="116" frameHeight="148"/>
+</TextureAtlas>

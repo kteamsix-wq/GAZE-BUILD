@@ -1,6 +1,5 @@
 {
-	"freeplayColor": [146, 113, 253],
 	"songs": [
-		["Mindless", "tankman", [255, 255, 255]]
+		["test", "bf", [255, 255, 255]]
 	]
 }

@@ -1,4 +1,4 @@
-﻿package menus.objects;
+package menus.objects;
 import gameplay.objects.FunkinArrows;
 import editors.*;
 import core.system.Paths;
@@ -80,25 +80,48 @@ class Alphabet extends FlxSpriteGroup
 		startText(text, typed);
 	}
 
+	public static function cleanText(input:String):String
+	{
+		if (input == null) return "";
+		var result:String = input;
+		result = StringTools.replace(result, "\\n", "\n");
+		var map:Map<String, String> = [
+			'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a', 'ä' => 'a',
+			'Á' => 'A', 'À' => 'A', 'Ã' => 'A', 'Â' => 'A', 'Ä' => 'A',
+			'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+			'É' => 'E', 'È' => 'E', 'Ê' => 'E', 'Ë' => 'E',
+			'í' => 'i', 'ì' => 'i', 'î' => 'i', 'ï' => 'i',
+			'Í' => 'I', 'Ì' => 'I', 'Î' => 'I', 'Ï' => 'I',
+			'ó' => 'o', 'ò' => 'o', 'õ' => 'o', 'ô' => 'o', 'ö' => 'o',
+			'Ó' => 'O', 'Ò' => 'O', 'Õ' => 'O', 'Ô' => 'O', 'Ö' => 'O',
+			'ú' => 'u', 'ù' => 'u', 'û' => 'u', 'ü' => 'u',
+			'Ú' => 'U', 'Ù' => 'U', 'Û' => 'U', 'Ü' => 'U',
+			'ç' => 'c', 'Ç' => 'C', 'ñ' => 'n', 'Ñ' => 'N'
+		];
+		for (k => v in map)
+		{
+			result = StringTools.replace(result, k, v);
+		}
+		return result;
+	}
+
 	public function startText(newText, typed)
 	{
 		yMulti = 1;
 		finishedLine = false;
 		xPosResetted = true;
 
+		newText = cleanText(newText);
 		_finalText = newText;
 		textInit = newText;
 		this.text = newText;
 
 		if (text != "")
 		{
+			addText();
 			if (typed)
 			{
-				startTypedText();
-			}
-			else
-			{
-				addText();
+				startTypewriter(textSpeed);
 			}
 		}
 		else
@@ -108,18 +131,26 @@ class Alphabet extends FlxSpriteGroup
 				destroyText();
 				swagTypingTimer.cancel();
 				swagTypingTimer.destroy();
+				swagTypingTimer = null;
 			}
 		}
 	}
 
 	function destroyText():Void
 	{
+		if (swagTypingTimer != null)
+		{
+			swagTypingTimer.cancel();
+			swagTypingTimer.destroy();
+			swagTypingTimer = null;
+		}
 		for (_sprite in group.members.copy())
 			_sprite.destroy();
 		clear();
+		arrayLetters = [];
 	}
 
-	public var arrayLetters:Array<AlphaCharacter>;
+	public var arrayLetters:Array<AlphaCharacter> = [];
 
 	public function addText()
 	{
@@ -131,6 +162,14 @@ class Alphabet extends FlxSpriteGroup
 		{
 			if (character == " " || character == "-")
 				lastWasSpace = true;
+
+			if (character == "\n")
+			{
+				yMulti += 1;
+				xPosResetted = true;
+				lastSprite = null;
+				continue;
+			}
 
 			var isNumber:Bool = AlphaCharacter.numbers.contains(character);
 			var isSymbol:Bool = AlphaCharacter.symbols.contains(character);
@@ -150,11 +189,12 @@ class Alphabet extends FlxSpriteGroup
 
 				if (lastWasSpace)
 				{
-					xPos += 40;
+					xPos += 40 * textSize;
 					lastWasSpace = false;
 				}
 
-				var letter:AlphaCharacter = new AlphaCharacter(xPos, 0, textSize, isBold);
+				var letterY:Float = (yMulti - 1) * (isBold ? 65 * textSize : 55 * textSize);
+				var letter:AlphaCharacter = new AlphaCharacter(xPos, letterY, textSize, isBold);
 
 				if (isNumber) letter.createNumber(character); else if (isSymbol) letter.createSymbol(character); else if (isBold) letter.createBold(character); else letter.createLetter(character);
 
@@ -173,102 +213,83 @@ class Alphabet extends FlxSpriteGroup
 
 	public var swagTypingTimer:FlxTimer;
 
-	public function startTypedText():Void
+	public function startTypewriter(speed:Float = 0.05, ?onComplete:Void->Void):Void
 	{
-		_finalText = text;
-		doSplitWords();
-
-		// Remove all the old garbage
-		destroyText();
-
-		var loopNum:Int = 0;
-
-		var xPos:Float = 0;
-		var curRow:Int = 0;
-
-		// Forget any potential old timers
-		if (swagTypingTimer != null)
-			swagTypingTimer.destroy();
-
-		// Create a new timer
-		swagTypingTimer = new FlxTimer().start(textSpeed, function(tmr:FlxTimer)
+		if (arrayLetters == null || arrayLetters.length == 0)
 		{
-			if (_finalText.fastCodeAt(loopNum) == "\n".code)
+			finishedLine = true;
+			if (onComplete != null) onComplete();
+			return;
+		}
+
+		for (letter in arrayLetters)
+		{
+			if (letter != null)
+				letter.visible = false;
+		}
+
+		if (swagTypingTimer != null)
+		{
+			swagTypingTimer.cancel();
+			swagTypingTimer.destroy();
+			swagTypingTimer = null;
+		}
+
+		var curIdx:Int = 0;
+		swagTypingTimer = new FlxTimer().start(speed, function(tmr:FlxTimer)
+		{
+			if (curIdx < arrayLetters.length)
 			{
-				yMulti += 1;
-				xPosResetted = true;
-				curRow += 1;
-			}
+				if (arrayLetters[curIdx] != null)
+					arrayLetters[curIdx].visible = true;
 
-			if (splitWords[loopNum] == " ")
-			{
-				lastWasSpace = true;
-			}
-
-			#if (haxe >= "4.0.0")
-			var isNumber:Bool = AlphaCharacter.numbers.contains(splitWords[loopNum]);
-			var isSymbol:Bool = AlphaCharacter.symbols.contains(splitWords[loopNum]);
-			#else
-			var isNumber:Bool = AlphaCharacter.numbers.indexOf(splitWords[loopNum]) != -1;
-			var isSymbol:Bool = AlphaCharacter.symbols.indexOf(splitWords[loopNum]) != -1;
-			#end
-
-			if (AlphaCharacter.alphabet.indexOf(splitWords[loopNum].toLowerCase()) != -1 || isNumber || isSymbol)
-			{
-				if (lastSprite != null && !xPosResetted)
+				if (playSounds && soundChoices.length > 0)
 				{
-					lastSprite.updateHitbox();
-					xPos += lastSprite.width + 3;
-				}
-				else
-				{
-					xPos = 0;
-					xPosResetted = false;
-				}
-
-				if (lastWasSpace)
-				{
-					xPos += 20;
-					lastWasSpace = false;
-				}
-				var letter:AlphaCharacter = new AlphaCharacter(xPos, 55 * yMulti, textSize, isBold);
-				letter.row = curRow;
-				{ if (isNumber) letter.createNumber(splitWords[loopNum]); else if (isSymbol) letter.createSymbol(splitWords[loopNum]); else if (isBold) letter.createBold(splitWords[loopNum]); else letter.createLetter(splitWords[loopNum]); if (!isBold) letter.x += 90; }
-
-				if (FlxG.random.bool(soundChance) || lastPlayed > 2)
-				{
-					if (playSounds)
+					if (FlxG.random.bool(soundChance) || lastPlayed > 2)
 					{
 						lastPlayed = 0;
-
 						var cur = FlxG.random.int(0, soundChoices.length - 1);
 						var daSound:String = beginPath + soundChoices[cur] + "." + Paths.SOUND_EXT;
-
-						FlxG.sound.play(openfl.media.Sound.fromFile(daSound));
+						#if sys
+						if (sys.FileSystem.exists(daSound))
+						{
+							FlxG.sound.play(openfl.media.Sound.fromFile(daSound));
+						}
+						#end
 					}
+					else
+						lastPlayed += 1;
 				}
-				else
-					lastPlayed += 1;
-
-				add(letter);
-
-				lastSprite = letter;
+				curIdx++;
 			}
 
-			loopNum += 1;
-
-			if (randomSpeed)
-				tmr.time = FlxG.random.float(0.8 * textSpeed, 1.8 * textSpeed);
-
-			// I'm sorry for this implementation being a bit janky but the FlxTimer loops were not reliable for this
-			// Hope you forgive me <3 <3 xoxo Sammu
-			// i forgive u sammu :D
-			if (loopNum >= splitWords.length)
+			if (curIdx >= arrayLetters.length)
 			{
 				finishedLine = true;
+				if (onComplete != null) onComplete();
 				tmr.destroy();
+				swagTypingTimer = null;
 			}
 		}, 0);
+	}
+
+	public function startTypedText():Void
+	{
+		destroyText();
+		addText();
+		startTypewriter(textSpeed);
+	}
+
+	override public function destroy():Void
+	{
+		if (swagTypingTimer != null)
+		{
+			swagTypingTimer.cancel();
+			swagTypingTimer.destroy();
+			swagTypingTimer = null;
+		}
+		arrayLetters = null;
+		super.destroy();
 	}
 
 	override function update(elapsed:Float)
@@ -287,10 +308,14 @@ class Alphabet extends FlxSpriteGroup
 
 		if ((text != textInit))
 		{
-			if (arrayLetters.length > 0)
+			if (arrayLetters != null && arrayLetters.length > 0)
+			{
 				for (i in 0...arrayLetters.length)
-					arrayLetters[i].destroy();
-			//
+				{
+					if (arrayLetters[i] != null)
+						arrayLetters[i].destroy();
+				}
+			}
 			lastSprite = null;
 			startText(text, false);
 		}
@@ -334,7 +359,6 @@ class AlphaCharacter extends FlxSprite
 		scale.set(textSize, textSize);
 		updateHitbox();
 
-		FlxG.log.add('the row' + row);
 
 		y = (110 - height);
 		y += row * 50;

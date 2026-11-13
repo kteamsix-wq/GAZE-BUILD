@@ -27,9 +27,9 @@ class GameOverSubstate extends MusicBeatSubState
 	public static var instance:GameOverSubstate;
 
 	public static var characterName:String = 'bf-dead';
-	public static var deathSoundName:String = 'system/gameover/fnf_loss_sfx';
-	public static var loopSoundName:String = 'system/gameover/gameOver';
-	public static var endSoundName:String = 'system/gameover/gameOverEnd';
+	public static var deathSoundName:String = 'gameover/fnf_loss_sfx';
+	public static var loopSoundName:String = 'gameover/gameOver';
+	public static var endSoundName:String = 'gameover/gameOverEnd';
 	public static var deathDelay:Float = 0;
 
 	public var boyfriend:Boyfriend;
@@ -40,9 +40,9 @@ class GameOverSubstate extends MusicBeatSubState
 	public static function resetVariables()
 	{
 		characterName = 'bf-dead';
-		deathSoundName = 'system/gameover/fnf_loss_sfx';
-		loopSoundName = 'system/gameover/gameOver';
-		endSoundName = 'system/gameover/gameOverEnd';
+		deathSoundName = 'gameover/fnf_loss_sfx';
+		loopSoundName = 'gameover/gameOver';
+		endSoundName = 'gameover/gameOverEnd';
 		deathDelay = 0;
 
 		var _song:Dynamic = PlayState.SONG;
@@ -76,28 +76,60 @@ class GameOverSubstate extends MusicBeatSubState
 	{
 		if (key == null || key.trim().length == 0)
 			return null;
-		var snd = Paths.sound(key);
-		if (snd == null && !key.startsWith('system/gameover/'))
-			snd = Paths.sound('system/gameover/' + key);
-		if (snd == null)
-			snd = Paths.music(key);
-		if (snd == null && !key.startsWith('system/gameover/'))
-			snd = Paths.music('system/gameover/' + key);
-		return snd;
+		var clean = key.trim();
+		if (clean.startsWith('system/'))
+			clean = clean.substring(7);
+
+		var candidates:Array<String> = [
+			clean,
+			'gameover/' + clean,
+			'system/gameover/' + clean,
+			key
+		];
+
+		for (cand in candidates)
+		{
+			var snd = Paths.sound(cand);
+			if (snd != null) return snd;
+		}
+
+		for (cand in candidates)
+		{
+			var mus = Paths.music(cand);
+			if (mus != null) return mus;
+		}
+
+		return null;
 	}
 
 	private static function resolveGameOverMusic(key:String):openfl.media.Sound
 	{
 		if (key == null || key.trim().length == 0)
 			return null;
-		var mus = Paths.music(key);
-		if (mus == null && !key.startsWith('system/gameover/'))
-			mus = Paths.music('system/gameover/' + key);
-		if (mus == null)
-			mus = Paths.sound(key);
-		if (mus == null && !key.startsWith('system/gameover/'))
-			mus = Paths.sound('system/gameover/' + key);
-		return mus;
+		var clean = key.trim();
+		if (clean.startsWith('system/'))
+			clean = clean.substring(7);
+
+		var candidates:Array<String> = [
+			clean,
+			'gameover/' + clean,
+			'system/gameover/' + clean,
+			key
+		];
+
+		for (cand in candidates)
+		{
+			var mus = Paths.music(cand);
+			if (mus != null) return mus;
+		}
+
+		for (cand in candidates)
+		{
+			var snd = Paths.sound(cand);
+			if (snd != null) return snd;
+		}
+
+		return null;
 	}
 
 	public function new(?playStateBoyfriend:Boyfriend = null)

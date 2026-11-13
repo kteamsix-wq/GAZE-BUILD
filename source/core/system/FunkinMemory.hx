@@ -1,4 +1,4 @@
-﻿package core.system;
+package core.system;
 
 using StringTools;
 
@@ -281,8 +281,10 @@ class FunkinMemory
 		init();
 
 		// Ensure core menu music tracks are protected from automatic purging
+		Paths.excludeAsset('assets/music/freakyMenu.${Paths.SOUND_EXT}');
 		Paths.excludeAsset('assets/music/system/freakyMenu.${Paths.SOUND_EXT}');
 		Paths.excludeAsset('assets/music/foreverMenu.${Paths.SOUND_EXT}');
+		Paths.excludeAsset('assets/music/breakfast.${Paths.SOUND_EXT}');
 		Paths.excludeAsset('assets/music/system/breakfast.${Paths.SOUND_EXT}');
 
 		clearMajor();
@@ -348,6 +350,9 @@ class FunkinMemory
 	{
 		#if (cpp || neko)
 		Gc.run(true);
+		#if (cpp && windows)
+		trimWorkingSet();
+		#end
 		#elseif hl
 		Gc.major();
 		#else

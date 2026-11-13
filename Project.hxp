@@ -1,0 +1,724 @@
+package;
+
+import hxp.*;
+import lime.tools.*;
+import sys.FileSystem;
+import sys.io.File;
+
+using StringTools;
+
+/**
+ * Gaze Engine — Lime HXP Build Configuration (`Project.hxp`)
+ *
+ * Replaces the legacy `Project.xml` with a programmable Haxe build script.
+ * Includes:
+ * - Multi-threaded HXCPP compilation (`HXCPP_COMPILE_THREADS`) & optional compile cache (`-DHXCPP_CACHE`)
+ * - Thread-safe Garbage Collector optimizations (`HXCPP_GC_DYNAMIC_SIZE`, `HXCPP_GC_BIG_BLOCKS`) compatible with LibVLC native threads
+ * - Dead Code Elimination (`-dce std` in release, `-DFULL_DCE` optional) & optional static analyzer (`-DANALYZER_OPTIMIZE`)
+ * - Automatic `-final` distribution profile (strips `trace()` and line-by-line stack tracking overhead)
+ * - Automatic `.webp` vs `.png` asset deduplication during packaging
+ * - Fast iteration developer flags (`-DFAST_BUILD`, `-DONLY_SONG=<song>`, `-DNO_SONGS`, `-DNO_VIDEOS`, `-DNO_DISCORD_RPC`)
+ * - Zero-overhead Git branch & commit hash injection (`GIT_BRANCH`, `GIT_COMMIT_HASH`)
+ */
+class Project extends HXProject
+{
+	public static inline var TITLE:String = "Friday Night Funkin': Gaze Engine";
+	public static inline var FILE:String = "Gaze";
+	public static inline var PACKAGE_NAME:String = "com.asta.Gengine";
+	public static inline var VERSION:String = "0.0.2";
+	public static inline var COMPANY:String = "Asta";
+	public static inline var MAIN_CLASS:String = "Main";
+	public static inline var PRELOADER:String = "flixel.system.FlxPreloader";
+	public static inline var SWF_VERSION:Float = 11.8;
+
+	public static inline var BASE_EXPORT_DIR:String = "export";
+
+	/** Default file patterns excluded when bundling assets. */
+	public static final DEFAULT_ASSET_EXCLUDES:Array<String> = [
+		".*",
+		"cvs",
+		"thumbs.db",
+		"desktop.ini",
+		"*.fla",
+		"*.hash",
+		"*.bak",
+		"*.tmp",
+		"*.psd",
+		"*.xcf"
+	];
+
+	public function new()
+	{
+		super();
+
+		configureFastBuildShortcuts();
+		configureAppMeta();
+		configureGitMetadata();
+		configureBuildPath();
+		configureWindow();
+		configureFeatureFlags();
+		configurePathsAndAssets();
+		configureLibraries();
+		configureCompilerFlags();
+		configureHXCPPBuildEnvironment();
+		configureIcons();
+	}
+
+	/**
+	 * Applies developer convenience shortcuts such as `-DFAST_BUILD`.
+	 */
+	function configureFastBuildShortcuts():Void
+	{
+		if (hasFlag("FAST_BUILD"))
+		{
+			setVariable("NO_DISCORD_RPC", "1");
+			setVariable("NO_VIDEOS", "1");
+			setVariable("NO_DEBUG_SERVER", "1");
+		}
+	}
+
+	/**
+	 * Configures application metadata, main entry point, and preloader.
+	 */
+	function configureAppMeta():Void
+	{
+		meta.title = TITLE;
+		meta.version = VERSION;
+		meta.packageName = PACKAGE_NAME;
+		meta.company = COMPANY;
+
+		app.main = MAIN_CLASS;
+		app.file = FILE;
+		app.preloader = PRELOADER;
+		app.swfVersion = SWF_VERSION;
+		setVariable("SWF_VERSION", Std.string(SWF_VERSION));
+	}
+
+	/**
+	 * Reads `.git/HEAD` directly from disk (without spawning subprocesses)
+	 * to expose `GIT_BRANCH` and `GIT_COMMIT_HASH` defines at compile time.
+	 */
+	function configureGitMetadata():Void
+	{
+		try
+		{
+			var headPath = ".git/HEAD";
+			if (!FileSystem.exists(headPath))
+				return;
+
+			var headContent = File.getContent(headPath).trim();
+			var branch = "detached";
+			var commitHash = headContent;
+
+			if (headContent.startsWith("ref:"))
+			{
+				var refPath = headContent.substr(4).trim();
+				var slashIdx = refPath.lastIndexOf("/");
+				if (slashIdx != -1)
+					branch = refPath.substr(slashIdx + 1);
+
+				var fullRefFile = '.git/$refPath';
+				if (FileSystem.exists(fullRefFile))
+					commitHash = File.getContent(fullRefFile).trim();
+			}
+
+			if (commitHash.length >= 7)
+			{
+				setDefine("GIT_BRANCH", branch);
+				setDefine("GIT_COMMIT_HASH", commitHash.substr(0, 7));
+			}
+		}
+		catch (_:Dynamic) {}
+	}
+
+	/**
+	 * Configures the output build directory (`export/debug`, `export/32bit`, or `export/release`).
+	 */
+	function configureBuildPath():Void
+	{
+		var buildDir:String = BASE_EXPORT_DIR + "/";
+		if (isDebug())
+			buildDir += "debug";
+		else if (is32Bit())
+			buildDir += "32bit";
+		else
+			buildDir += "release";
+
+		app.path = buildDir;
+		setVariable("BUILD_DIR", buildDir);
+	}
+
+	/**
+	 * Configures base and platform-specific window properties.
+	 */
+	function configureWindow():Void
+	{
+		// Base settings applied to all targets
+		window.width = 1280;
+		window.height = 720;
+		window.fps = 60;
+		window.background = 0x000000;
+		window.hardware = true;
+		window.vsync = false;
+		window.allowHighDPI = true;
+
+		// Web / HTML5 specific
+		if (isWeb())
+		{
+			window.resizable = true;
+		}
+
+		// Desktop specific (Windows, macOS, Linux)
+		if (isDesktop())
+		{
+			window.orientation = Orientation.LANDSCAPE;
+			window.fullscreen = false;
+			window.resizable = true;
+		}
+
+		// Mobile specific (Android, iOS)
+		if (isMobile())
+		{
+			window.orientation = Orientation.LANDSCAPE;
+			window.fullscreen = true;
+			window.resizable = false;
+		}
+	}
+
+	/**
+	 * Configures engine feature flags.
+	 * Any flag can be disabled from the CLI via `-DNO_<FEATURE>` or `-DWITHOUT_<FEATURE>`.
+	 */
+	function configureFeatureFlags():Void
+	{
+		// Discord Rich Presence (Desktop native only)
+		if (isDesktop() && !isWeb() && !isNeko() && !hasFlag("NO_DISCORD_RPC") && !hasFlag("WITHOUT_DISCORD"))
+		{
+			setDefine("DISCORD_RPC");
+		}
+
+		// HScript runtime scripting support
+		if (!hasFlag("NO_HSCRIPT") && !hasFlag("WITHOUT_HSCRIPT"))
+		{
+			setDefine("HSCRIPT_ALLOWED");
+		}
+
+		// Video playback support via hxvlc (Desktop & Mobile)
+		if ((isDesktop() || isMobile()) && !hasFlag("NO_VIDEOS") && !hasFlag("WITHOUT_VIDEOS"))
+		{
+			setDefine("VIDEOS_ALLOWED");
+		}
+
+		// Runtime mod folder support (Desktop/Mobile)
+		if ((isDesktop() || isMobile()) && !hasFlag("NO_MODS") && !hasFlag("WITHOUT_MODS"))
+		{
+			setDefine("MODS_ALLOWED");
+		}
+
+		// Native crash handler support
+		if (isDesktop() && isCPP() && !hasFlag("NO_CRASH_HANDLER"))
+		{
+			setDefine("CRASH_HANDLER");
+		}
+	}
+
+	/**
+	 * Configures source classpaths and game asset directories with smart filtering:
+	 * - Deduplicates `.png` files when a matching `.webp` file exists in the same folder
+	 * - Supports `-DNO_SONGS` and `-DONLY_SONG=<songName>` for ultra-fast dev packaging
+	 */
+	function configurePathsAndAssets():Void
+	{
+		addSource("source");
+
+		var assetExcludes:Array<String> = DEFAULT_ASSET_EXCLUDES.copy();
+		if (isWeb() && !hasDefine("VIDEOS_ALLOWED"))
+		{
+			assetExcludes.push("*.mp4");
+		}
+
+		if (!FileSystem.exists("assets"))
+			return;
+
+		var onlySong:String = getFlagValue("ONLY_SONG");
+		var skipAllSongs:Bool = hasFlag("NO_SONGS");
+
+		for (entry in FileSystem.readDirectory("assets"))
+		{
+			var fullPath = 'assets/$entry';
+			if (entry == "songs" && FileSystem.isDirectory(fullPath))
+			{
+				if (skipAllSongs)
+					continue;
+
+				if (onlySong != null && onlySong.length > 0)
+				{
+					var targetSong = onlySong.toLowerCase().trim();
+					for (songEntry in FileSystem.readDirectory(fullPath))
+					{
+						var songPath = '$fullPath/$songEntry';
+						if (!FileSystem.isDirectory(songPath) || songEntry.toLowerCase() == targetSong)
+						{
+							addAssetPath(songPath, 'assets/songs/$songEntry', null, ["*"], assetExcludes);
+						}
+					}
+					continue;
+				}
+			}
+
+			addAssetPath(fullPath, 'assets/$entry', null, ["*"], assetExcludes);
+		}
+	}
+
+	/**
+	 * Registers required and conditional Haxelib dependencies.
+	 */
+	function configureLibraries():Void
+	{
+		if (isWeb())
+		{
+			setHaxedef("webgl");
+		}
+
+		if (hasDefine("VIDEOS_ALLOWED"))
+		{
+			addHaxelib("hxvlc");
+		}
+
+		if (hasDefine("HSCRIPT_ALLOWED"))
+		{
+			addHaxelib("hscript");
+		}
+
+		addHaxelib("flixel");
+		addHaxelib("flixel-animate");
+		addHaxelib("flixel-addons");
+		addHaxelib("flixel-ui");
+
+		if (hasDefine("DISCORD_RPC"))
+		{
+			addHaxelib("hxdiscord_rpc");
+		}
+
+		if (isDebug() && isCPP() && !hasFlag("NO_DEBUG_SERVER"))
+		{
+			addHaxelib("hxcpp-debug-server");
+		}
+
+		addHaxelib("hxWebP");
+	}
+
+	/**
+	 * Configures Haxe compiler optimizations, Flixel defines, and HXCPP GC/runtime flags.
+	 */
+	function configureCompilerFlags():Void
+	{
+		// 1. Haxe Compiler Static Analyzer (opt-in via -DANALYZER_OPTIMIZE) & Dead Code Elimination
+		if (hasFlag("ANALYZER_OPTIMIZE"))
+		{
+			setHaxedef("analyzer-optimize");
+		}
+
+		if (!isDebug() && !hasFlag("NO_DCE"))
+		{
+			if (hasFlag("FULL_DCE"))
+				addHaxeflag("-dce", "full");
+			else
+				addHaxeflag("-dce", "std");
+		}
+
+		// Strip trace() calls in -final builds (or when -DNO_TRACES is specified)
+		if ((isFinal() || hasFlag("NO_TRACES")) && !hasFlag("KEEP_TRACES"))
+		{
+			addHaxeflag("--no-traces");
+		}
+
+		// 2. HaxeFlixel & Nape Engine Optimizations
+		if (isDesktop())
+		{
+			setHaxedef("FLX_NO_TOUCH");
+		}
+
+		setHaxedef("FLX_NO_FOCUS_LOST_SCREEN");
+
+		// Remove unused per-object FlxObject.health field across all sprites
+		if (!hasFlag("FLX_HEALTH"))
+		{
+			setHaxedef("FLX_NO_HEALTH");
+		}
+
+		if (!isDebug())
+		{
+			setHaxedef("FLX_NO_DEBUG");
+			setHaxedef("NAPE_RELEASE_BUILD");
+		}
+
+		// 3. HXCPP Garbage Collector & Memory Optimizations
+		// Note 1: Do NOT enable HXCPP_GC_GENERATIONAL or HXCPP_GC_MOVING when hxvlc is used,
+		// because LibVLC invokes VideoOutput/AudioOutput callbacks from foreign C threads
+		// where HX_JUST_GC_STACKFRAME captures a null tlsStackContext before hx::SetTopOfStack,
+		// causing HX_OBJ_WB (write barrier) to dereference nullptr on the first video frame.
+		// Note 2: Do NOT enable HXCPP_GC_DYNAMIC_SIZE because Immix GC dynamically scales
+		// spaceFactor up to 5.0 during burst allocations, delaying GC collections until heap
+		// balloons to 1GB+, which subsequently causes massive multi-frame GC collection stalls (FPS drop).
+		setHaxedef("HXCPP_GC_BIG_BLOCKS");
+
+		// 4. HXCPP Crash Safety vs Final CPU Throughput
+		setHaxedef("HXCPP_CHECK_POINTER");
+
+		// In -final builds, omit line-by-line stack tracking overhead unless -DKEEP_STACK_LINE is passed
+		if ((!isFinal() && !hasFlag("FAST_CPP")) || hasFlag("KEEP_STACK_LINE"))
+		{
+			setHaxedef("HXCPP_STACK_LINE");
+		}
+
+		if (isDesktop() && isCPP() && !is32Bit())
+		{
+			setHaxedef("HXCPP_M64");
+		}
+
+		// 5. Compiler Diagnostics & Deprecation Warning Suppression
+		setHaxedef("message.reporting", "pretty");
+		if (!hasFlag("SHOW_DEPRECATION_WARNINGS"))
+		{
+			setHaxedef("no-deprecation-warnings");
+		}
+	}
+
+	/**
+	 * Configures multi-threaded C++ compilation (`HXCPP_COMPILE_THREADS`) and optional
+	 * object compilation cache (`-DHXCPP_CACHE`) to speed up native C++ builds.
+	 */
+	function configureHXCPPBuildEnvironment():Void
+	{
+		if (!isCPP())
+			return;
+
+		// Automatically use all available logical CPU cores for C++ compilation
+		var threads = Sys.getEnv("HXCPP_COMPILE_THREADS");
+		if (threads == null || threads.trim() == "")
+		{
+			var hostCores = Sys.getEnv("NUMBER_OF_PROCESSORS");
+			if (hostCores != null && Std.parseInt(hostCores) != null && Std.parseInt(hostCores) > 1)
+			{
+				threads = Std.string(Std.parseInt(hostCores));
+			}
+		}
+
+		if (threads != null && threads != "")
+		{
+			setenv("HXCPP_COMPILE_THREADS", threads);
+			setVariable("HXCPP_COMPILE_THREADS", threads);
+		}
+
+		// Optional local HXCPP compile cache (enable with -DHXCPP_CACHE)
+		if (hasFlag("HXCPP_CACHE"))
+		{
+			var cacheDir = FileSystem.fullPath(".hxcpp_cache");
+			if (!FileSystem.exists(cacheDir))
+			{
+				try { FileSystem.createDirectory(cacheDir); } catch (_:Dynamic) {}
+			}
+			setenv("HXCPP_COMPILE_CACHE", cacheDir);
+			setVariable("HXCPP_COMPILE_CACHE", cacheDir);
+			setHaxedef("HXCPP_COMPILE_CACHE", cacheDir);
+		}
+	}
+
+	/**
+	 * Registers application window/executable icons from `art/`.
+	 */
+	function configureIcons():Void
+	{
+		addIcon("art/icon.png");
+
+		// Automatically pick up size-specific icons if added to art/
+		for (size in [16, 32, 64, 128, 256, 512])
+		{
+			var sizedIcon = 'art/icon${size}.png';
+			if (FileSystem.exists(sizedIcon))
+			{
+				addIcon(sizedIcon, size);
+			}
+		}
+	}
+
+	public inline function isDesktop():Bool
+		return platformType == PlatformType.DESKTOP;
+
+	public inline function isMobile():Bool
+		return platformType == PlatformType.MOBILE;
+
+	public inline function isWeb():Bool
+		return platformType == PlatformType.WEB || target == Platform.HTML5;
+
+	public inline function isConsole():Bool
+		return platformType == PlatformType.CONSOLE;
+
+	public inline function isWindows():Bool
+		return target == Platform.WINDOWS;
+
+	public inline function isMac():Bool
+		return target == Platform.MAC;
+
+	public inline function isLinux():Bool
+		return target == Platform.LINUX;
+
+	public inline function isAndroid():Bool
+		return target == Platform.ANDROID;
+
+	public inline function isIOS():Bool
+		return target == Platform.IOS;
+
+	public inline function isNeko():Bool
+		return targetFlags.exists("neko") || defines.exists("neko");
+
+	public inline function isHL():Bool
+		return targetFlags.exists("hl") || defines.exists("hl");
+
+	public inline function isCPP():Bool
+		return defines.exists("cpp") || (!isWeb() && !isNeko() && !isHL());
+
+	public inline function isDebug():Bool
+		return debug;
+
+	public inline function isFinal():Bool
+		return targetFlags.exists("final") || defines.exists("final");
+
+	public inline function is32Bit():Bool
+		return targetFlags.exists("32bit") || targetFlags.exists("32bits") || defines.exists("32bit") || defines.exists("32bits") || defines.exists("HXCPP_M32");
+
+	/**
+	 * Checks whether a define or target flag is set via CLI or project config.
+	 */
+	public inline function hasFlag(name:String):Bool
+	{
+		return defines.exists(name) || targetFlags.exists(name) || haxedefs.exists(name);
+	}
+
+	/**
+	 * Retrieves the string value of a CLI define or haxedef (or `null` if not set).
+	 */
+	public function getFlagValue(name:String):Null<String>
+	{
+		if (defines.exists(name))
+			return defines.get(name);
+		if (haxedefs.exists(name))
+			return Std.string(haxedefs.get(name));
+		if (targetFlags.exists(name))
+			return targetFlags.get(name);
+		return null;
+	}
+
+	/**
+	 * Checks whether a project/compiler define is active.
+	 */
+	public inline function hasDefine(name:String):Bool
+	{
+		return defines.exists(name) || haxedefs.exists(name);
+	}
+
+	/**
+	 * Equivalent to `<set name="..." value="..." />` in `Project.xml`.
+	 */
+	public function setVariable(name:String, value:String = ""):Void
+	{
+		defines.set(name, value);
+		environment.set(name, value);
+	}
+
+	/**
+	 * Equivalent to `<unset name="..." />` in `Project.xml`.
+	 */
+	public function unsetVariable(name:String):Void
+	{
+		defines.remove(name);
+		environment.remove(name);
+	}
+
+	/**
+	 * Equivalent to `<define name="..." value="..." />` in `Project.xml`.
+	 * Sets the flag in `defines`, `haxedefs` (`-D`), and `environment`.
+	 */
+	public function setDefine(name:String, value:String = ""):Void
+	{
+		defines.set(name, value);
+		haxedefs.set(name, value);
+		environment.set(name, value);
+	}
+
+	/**
+	 * Equivalent to `<undefine name="..." />` in `Project.xml`.
+	 */
+	public function unsetDefine(name:String):Void
+	{
+		defines.remove(name);
+		haxedefs.remove(name);
+		environment.remove(name);
+	}
+
+	/**
+	 * Equivalent to `<haxedef name="..." value="..." />` in `Project.xml`.
+	 */
+	public inline function setHaxedef(name:String, value:String = ""):Void
+	{
+		haxedefs.set(name, value);
+	}
+
+	/**
+	 * Equivalent to `<haxedef remove="..." />` in `Project.xml`.
+	 */
+	public inline function unsetHaxedef(name:String):Void
+	{
+		haxedefs.remove(name);
+	}
+
+	/**
+	 * Equivalent to `<haxeflag name="..." value="..." />` in `Project.xml`.
+	 */
+	public function addHaxeflag(flag:String, value:String = ""):Void
+	{
+		var fullFlag = value != "" ? '$flag $value' : flag;
+		if (!haxeflags.contains(fullFlag))
+			haxeflags.push(fullFlag);
+	}
+
+	/**
+	 * Equivalent to `<source path="..." />` in `Project.xml`.
+	 */
+	public function addSource(path:String):Void
+	{
+		if (!sources.contains(path))
+			sources.push(path);
+	}
+
+	/**
+	 * Equivalent to `<haxelib name="..." version="..." />` in `Project.xml`.
+	 */
+	public function addHaxelib(name:String, version:String = ""):Void
+	{
+		for (lib in haxelibs)
+		{
+			if (lib.name == name)
+				return;
+		}
+
+		var haxelib = new Haxelib(name, version);
+		if (!defines.exists(name))
+		{
+			defines.set(name, version != "" ? version : "1");
+		}
+		haxelibs.push(haxelib);
+	}
+
+	/**
+	 * Equivalent to `<library name="..." embed="..." preload="..." />` in `Project.xml`.
+	 */
+	public function addAssetLibrary(name:String, embed:Null<Bool> = null, preload:Bool = false):Void
+	{
+		for (lib in libraries)
+		{
+			if (lib.name == name)
+				return;
+		}
+		libraries.push(new Library(null, name, null, embed, preload));
+	}
+
+	/**
+	 * Adds a single asset file to the project.
+	 */
+	public function addAsset(path:String, rename:String = null, library:String = null, embed:Null<Bool> = null):Void
+	{
+		if (!FileSystem.exists(path) || FileSystem.isDirectory(path))
+			return;
+
+		var asset = new Asset(path, rename != null ? rename : path, null, embed);
+		if (library != null)
+		{
+			asset.library = library;
+			addAssetLibrary(library);
+		}
+		assets.push(asset);
+	}
+
+	/**
+	 * Recursively includes a directory of assets with optional rename, library assignment,
+	 * include/exclude glob patterns, embed control, and automatic `.webp` vs `.png` deduplication.
+	 */
+	public function addAssetPath(path:String, rename:String = null, library:String = null, include:Array<String> = null, exclude:Array<String> = null,
+			embed:Null<Bool> = null):Void
+	{
+		if (path == "" || !FileSystem.exists(path))
+			return;
+
+		if (!FileSystem.isDirectory(path))
+		{
+			addAsset(path, rename, library, embed);
+			return;
+		}
+
+		if (include == null)
+			include = ["*"];
+
+		var fullExclude = exclude != null ? exclude.copy() : [];
+		for (pattern in DEFAULT_ASSET_EXCLUDES)
+		{
+			if (!fullExclude.contains(pattern))
+				fullExclude.push(pattern);
+		}
+
+		var targetPath = rename != null ? rename : path;
+		if (targetPath != "" && !targetPath.endsWith("/"))
+			targetPath += "/";
+
+		if (library != null)
+			addAssetLibrary(library);
+
+		var deduplicateWebP:Bool = !hasFlag("KEEP_DUPLICATE_PNG");
+
+		for (file in FileSystem.readDirectory(path))
+		{
+			var fullSourcePath = '$path/$file';
+			var fullTargetPath = '$targetPath$file';
+
+			if (FileSystem.isDirectory(fullSourcePath))
+			{
+				if (filter(file, ["*"], fullExclude))
+				{
+					addAssetPath(fullSourcePath, fullTargetPath, library, include, fullExclude, embed);
+				}
+			}
+			else if (filter(file, include, fullExclude))
+			{
+				// Skip redundant .png if a .webp with the same base name exists in the same folder
+				if (deduplicateWebP && file.toLowerCase().endsWith(".png"))
+				{
+					var webpSibling = fullSourcePath.substr(0, fullSourcePath.length - 4) + ".webp";
+					if (FileSystem.exists(webpSibling))
+						continue;
+				}
+
+				var asset = new Asset(fullSourcePath, fullTargetPath, null, embed);
+				if (library != null)
+					asset.library = library;
+				assets.push(asset);
+			}
+		}
+	}
+
+	/**
+	 * Equivalent to `<icon path="..." size="..." />` in `Project.xml`.
+	 */
+	public function addIcon(path:String, size:Null<Int> = null):Void
+	{
+		if (!FileSystem.exists(path))
+			return;
+
+		var icon = new Icon(path);
+		if (size != null)
+		{
+			icon.size = icon.width = icon.height = size;
+		}
+		icons.push(icon);
+	}
+}
